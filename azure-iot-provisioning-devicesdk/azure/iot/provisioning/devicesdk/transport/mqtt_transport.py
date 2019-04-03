@@ -117,8 +117,6 @@ class MQTTTransport(object):
             queued=True,
         )
 
-        self._state_machine.on_enter_disconnecting("_execute_actions_in_queue")
-
     def send_registration_request(self, callback_subscribe=None, callback_request=None):
         logger.info("Sending registration request")
         subscribe_action = transport_action.SubscribeAction(
