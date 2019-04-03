@@ -22,7 +22,7 @@ class SymmetricKeyRegistrationClient(RegistrationClient):
         """
         Initializer for the Symmetric Key Registration Client
         """
-        RegistrationClient.__init__(self, transport)
+        super(SymmetricKeyRegistrationClient, self).__init__(transport)
         self._transport.on_transport_connected = self._on_state_change
         self._transport.on_transport_disconnected = self._on_state_change
         self._transport.on_transport_registration_update = self._on_device_registration_update
@@ -46,6 +46,7 @@ class SymmetricKeyRegistrationClient(RegistrationClient):
         self._transport.send_registration_request(
             callback_subscribe=callback_subscribe, callback_request=callback_request
         )
+        # TODO : Chnages to state machine inside mqtt
         subscribe_complete.wait() and send_request_complete.wait()
 
     def cancel(self):
@@ -74,7 +75,6 @@ class SymmetricKeyRegistrationClient(RegistrationClient):
             callback_disconnect=callback_disconnect, callback_unsubscribe=callback_unsubscribe
         )
 
-        # unsubscribe_complete.wait()
         disconnect_complete.wait()
 
     def _on_device_registration_update(self, topic, payload):

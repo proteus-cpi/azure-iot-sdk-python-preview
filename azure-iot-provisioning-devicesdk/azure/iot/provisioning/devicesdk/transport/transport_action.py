@@ -26,7 +26,8 @@ class SendRegistrationAction(TransportAction):
     """
 
     def __init__(self, publish_topic, request, callback):
-        TransportAction.__init__(self, callback)
+        super(SendRegistrationAction, self).__init__(callback)
+        # TransportAction.__init__(self, callback)
         self.publish_topic = publish_topic
         self.request = request
 
@@ -37,7 +38,8 @@ class SubscribeAction(TransportAction):
     """
 
     def __init__(self, subscribe_topic, qos, callback):
-        TransportAction.__init__(self, callback)
+        super(SubscribeAction, self).__init__(callback)
+        # TransportAction.__init__(self, callback)
         self.subscribe_topic = subscribe_topic
         self.qos = qos
 
@@ -48,15 +50,6 @@ class UnsubscribeAction(TransportAction):
     """
 
     def __init__(self, topic, callback):
-        TransportAction.__init__(self, callback)
+        super(UnsubscribeAction, self).__init__(callback)
+        # TransportAction.__init__(self, callback)
         self.topic = topic
-
-
-class MethodResponseAction(TransportAction):
-    """
-    TransportAction object used to send a method response back to the service.
-    """
-
-    def __init__(self, method_response, callback):
-        TransportAction.__init__(self, callback)
-        self.method_response = method_response

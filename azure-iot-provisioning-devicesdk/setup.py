@@ -14,7 +14,7 @@ setup(
     version="0.0.1",
     description="Microsoft Azure IoT SDK Provisioning",
     license="MIT License",
-    url="https://github.com/Azure/azure-iot-sdk-python",
+    url="https://github.com/Azure/azure-iot-sdk-python-preview",
     author="Microsoft Corporation",
     author_email="opensource@microsoft.com",
     long_description=_long_description,
