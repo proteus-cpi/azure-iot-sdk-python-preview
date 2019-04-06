@@ -55,6 +55,7 @@ class SymmetricKeyRegistrationClient(RegistrationClient):
         """
         pass
 
+    # TODO DO We need disconnect at client level ?
     def disconnect(self):
         """
         Disconnects the registration client from the IoT Hub

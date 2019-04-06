@@ -25,6 +25,15 @@ def test_getters_after_create_security_client():
     assert security_client.registration_id == fake_registration_id
 
 
+def test_properties_are_not_settable():
+    security_client = SymmetricKeySecurityClient(
+        fake_registration_id, fake_symmetric_key, fake_id_scope
+    )
+    with pytest.raises(AttributeError, match="can't set attribute"):
+        security_client.registration_id = "MyNimbus2000"
+        security_client.id_scope = "WhompingWillow"
+
+
 def test_create_sas():
     security_client = SymmetricKeySecurityClient(
         fake_registration_id, fake_symmetric_key, fake_id_scope

@@ -22,12 +22,15 @@ registration_client = create_from_security_client(
 
 def registration_status_callback(topic, payload):
     result = str(payload)
+    print("Topic is")
+    print(topic)
+    print("Payload received:")
     print(result)
     if "operationId" in result:
         print("Device is registering")
 
 
-registration_client.on_registration_complete = registration_status_callback
+registration_client.on_registration_update = registration_status_callback
 
 registration_client.register()
 
