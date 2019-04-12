@@ -80,8 +80,8 @@ pip install azure-iot-device
     ```python
     import os
     import asyncio
-    from azure.iot.device.iothub.aio import IoTHubDeviceClient
-    from azure.iot.device.iothub import auth
+    from azure.iot.device.aio import IoTHubDeviceClient
+    from azure.iot.device import auth
 
 
     async def main():
@@ -134,6 +134,6 @@ Our SDK makes use of docstrings which means you cand find API documentation dire
 
 
 ```python
->>> from azure.iot.device.iothub import IoTHubDeviceClient
+>>> from azure.iot.device import IoTHubDeviceClient
 >>> help(IoTHubDeviceClient)
 ```
