@@ -10,9 +10,9 @@ with open("README.md", "r") as fh:
     _long_description = fh.read()
 
 setup(
-    name="azure-iot-device-iothub",
+    name="azure-iot-device",
     version="2.0.0-preview",
-    description="Microsoft Azure IoT Hub Device SDK",
+    description="Microsoft Azure IoT Device Library",
     license="MIT License",
     url="https://github.com/Azure/azure-iot-sdk-python-preview",
     author="Microsoft Corporation",
