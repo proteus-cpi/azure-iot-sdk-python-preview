@@ -5,3 +5,5 @@ as a Device or Module.
 """
 
 from .async_clients import IoTHubDeviceClient, IoTHubModuleClient
+
+__all__ = ["IoTHubDeviceClient", "IoTHubModuleClient"]
