@@ -282,6 +282,7 @@ class PollingMachine(object):
         if callback:
             self._register_callback = None
             callback(registration_result)
+        # TODO : Should disconnect be by default called here ?
 
     def _set_query_timer(self):
         def time_up_query():

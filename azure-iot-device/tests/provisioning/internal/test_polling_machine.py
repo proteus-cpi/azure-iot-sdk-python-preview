@@ -156,7 +156,7 @@ class TestResponse:
         polling_machine.on_registration_status_update = MagicMock()
         polling_machine._handle_response_received(registration_result_assigning)
 
-        polling_timer_run.assert_called_once()
+        polling_timer_run.assert_called_once_with()
         mock_request_response_provider.send_request.assert_called_once_with(mock_publish_action)
 
     def test_on_receiving_response_with_status_error_calls_callback_of_register_error(

@@ -21,9 +21,7 @@ class RequestResponseMachine(object):
 
     def send_request(self, publish_action):
         """
-
-        :param publish_action: The publish
-        :return:
+        :param publish_action: The publish action
         """
         self.publish([publish_action])
 
@@ -47,8 +45,10 @@ class RequestResponseMachine(object):
         :param topic: The topic in bytes name on which the message arrived on.
         :param payload: Payload in bytes of the message received.
         """
+        # """ Sample topic and payload
         # $dps/registrations/res/200/?$rid=28c32371-608c-4390-8da7-c712353c1c3b
         # {"operationId":"4.550cb20c3349a409.390d2957-7b58-4701-b4f9-7fe848348f4a","status":"assigning"}
+        # """
         logger.info("")
         topic_str = topic.decode("utf-8")
         if topic_str.startswith("$dps/registrations/res/"):
