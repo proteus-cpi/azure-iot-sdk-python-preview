@@ -5,10 +5,10 @@
 # --------------------------------------------------------------------------
 
 import pytest
-from azure.iot.device.provisioning.registration_client import RegistrationClient
+from azure.iot.device.provisioning.provisioning_device_client import ProvisioningDeviceClient
 
 
 def test_raises_exception_on_init_of_abstract_transport(mocker):
     fake_transport = mocker.MagicMock
     with pytest.raises(TypeError):
-        RegistrationClient(fake_transport)
+        ProvisioningDeviceClient(fake_transport)

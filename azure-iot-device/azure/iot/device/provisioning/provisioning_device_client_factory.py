@@ -9,7 +9,7 @@ communicate with Device Provisioning Service.
 """
 from .security.sk_security_client import SymmetricKeySecurityClient
 
-from .sk_registration_client import SymmetricKeyRegistrationClient
+from .sk_provisioning_device_client import SymmetricKeyProvisioningDeviceClient
 from .transport.state_based_mqtt_provider import StateBasedMQTTProvider
 
 
@@ -23,18 +23,15 @@ def create_from_security_client(provisioning_host, security_client, transport_ch
     :param transport_choice: A string representing the transport the user wants
     :return: A specific registration client based on parameters and validations.
     """
-    if not provisioning_host:
-        raise ValueError("Provisioning Host must be provided.")
     transport_choice = transport_choice.lower()
     if transport_choice == "mqtt":
-        mqtt_state_based_provider = StateBasedMQTTProvider(provisioning_host, security_client)
         if isinstance(security_client, SymmetricKeySecurityClient):
-            return SymmetricKeyRegistrationClient(mqtt_state_based_provider)
-            # TODO : other instances of security provider can also be checked before creating mqtt
+            mqtt_state_based_provider = StateBasedMQTTProvider(provisioning_host, security_client)
+            return SymmetricKeyProvisioningDeviceClient(mqtt_state_based_provider)
+            # TODO : other instances of security provider can also be checked before creating mqtt and client
         else:
-            raise ValueError(
-                "A symmetric key security provider must be provided for instantiating MQTT"
-            )
+            raise ValueError("A symmetric key security provider must be provided for MQTT")
+
     else:
         raise NotImplementedError("This transport has not yet been implemented")
         # TODO : Message must be enhanced later for other security providers. MQTT can also support X509.

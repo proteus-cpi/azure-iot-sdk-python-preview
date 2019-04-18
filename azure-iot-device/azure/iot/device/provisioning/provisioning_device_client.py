@@ -13,7 +13,7 @@ import six
 
 
 @six.add_metaclass(abc.ABCMeta)
-class RegistrationClient(object):
+class ProvisioningDeviceClient(object):
     """
     Super class for any client that can be used to register devices to Device Provisioning Service.
     """

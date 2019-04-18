@@ -38,7 +38,7 @@ def test_create_sas():
     security_client = SymmetricKeySecurityClient(
         fake_registration_id, fake_symmetric_key, fake_id_scope
     )
-    sas_value = security_client.create_shared_access_signature()
+    sas_value = security_client.get_current_sas_token()
     assert key_name in sas_value
     assert fake_registration_id in sas_value
     assert fake_id_scope in sas_value

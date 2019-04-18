@@ -4,33 +4,34 @@
 # license information.
 # --------------------------------------------------------------------------
 """
-This module contains one of the implementations of the Registration Client which uses Symmetric Key authentication.
+This module contains one of the implementations of the Provisioning Device Client which uses Symmetric Key authentication.
 """
 import logging
 from threading import Event
-from .registration_client import RegistrationClient
-from .models.registration_result import RegistrationResult
+import traceback
+from .provisioning_device_client import ProvisioningDeviceClient
 from .internal.polling_machine import PollingMachine
 
 logger = logging.getLogger(__name__)
 
 
-class SymmetricKeyRegistrationClient(RegistrationClient):
+class SymmetricKeyProvisioningDeviceClient(ProvisioningDeviceClient):
     """
-    Client which can be used to run the registration of a device using Symmetric Key authentication.
+    Client which can be used to run the registration of a device with provisioning service
+    using Symmetric Key authentication.
     """
 
     def __init__(self, mqtt_state_based_provider):
         """
         Initializer for the Symmetric Key Registration Client
+        :param mqtt_state_based_provider: The state-based protocol provider. As of now this only supports MQTT.
         """
-        super(SymmetricKeyRegistrationClient, self).__init__(mqtt_state_based_provider)
+        super(SymmetricKeyProvisioningDeviceClient, self).__init__(mqtt_state_based_provider)
         self._polling_machine = PollingMachine(mqtt_state_based_provider)
         # To be defined by sample
-        self.on_registration_update = None
-        self._polling_machine.on_connected = self._on_state_change
-        self._polling_machine.on_disconnected = self._on_state_change
-        self._polling_machine.on_registration_status_update = self._on_device_registration_update
+        self.on_registration_complete = None
+        self._polling_machine.on_disconnected = self._on_connection_state_change
+        self._polling_machine.on_registration_complete = self._on_device_registration_complete
 
     def register(self):
         """
@@ -39,17 +40,18 @@ class SymmetricKeyRegistrationClient(RegistrationClient):
         logger.info("Registering with Hub...")
         register_complete = Event()
 
-        def callback_register(result):
-            register_complete.set()
-            # TODO This could be a failed result or a successful one.
-            # TODO Response should be given appropriately
-            if isinstance(result, RegistrationResult):
+        def callback_register(result=None, error=None):
+            # This could be a failed/successful registration result from the HUB
+            # or a error from polling machine. Response should be given appropriately
+            if result is not None:
                 if result.status == "assigned":
                     logger.info("Successfully registered with Hub")
-                else:  # TODO Only error or failed should come here
+                else:  # There be other statuses
                     logger.error("Failed registering with Hub")
-            else:
-                logger.info(result)
+            if error is not None:  # This can only happen when the polling machine runs into error
+                logger.info(error)
+
+            register_complete.set()
 
         self._polling_machine.register(callback=callback_register)
 
@@ -69,12 +71,17 @@ class SymmetricKeyRegistrationClient(RegistrationClient):
         self._polling_machine.cancel(callback=callback_cancel)
         cancel_complete.wait()
 
-    def _on_device_registration_update(self, registration_result):
+    def _on_device_registration_complete(self, registration_result):
         """Handler to be called by the transport when registration changes status."""
-        logger.info("on_device_registration_complete")
-        if self.on_registration_update:
-            self.on_registration_update(registration_result)
+        logger.info("_on_device_registration_update")
 
-    def _on_state_change(self, new_state):
+        if self.on_registration_complete:
+            try:
+                self.on_registration_complete(registration_result)
+            except:  # noqa: E722 do not use bare 'except'
+                logger.error("Unexpected error calling on_registration_complete")
+                logger.error(traceback.format_exc())
+
+    def _on_connection_state_change(self, new_state):
         """Handler to be called by the transport upon a connection state change."""
         logger.info("Connection State - {}".format(new_state))

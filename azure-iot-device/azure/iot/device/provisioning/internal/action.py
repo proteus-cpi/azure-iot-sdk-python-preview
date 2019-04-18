@@ -49,4 +49,4 @@ class UnsubscribeAction(Action):
 
     def __init__(self, topic, callback):
         super(UnsubscribeAction, self).__init__(callback)
-        self.topic = topic
+        self.unsubscribe_topic = topic

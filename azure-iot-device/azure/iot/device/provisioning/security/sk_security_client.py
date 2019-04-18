@@ -49,7 +49,7 @@ class SymmetricKeySecurityClient(object):
         """
         return self._id_scope
 
-    def create_shared_access_signature(self):
+    def _create_shared_access_signature(self):
         """
         Construct SAS tokens that have a hashed signature formed using the symmetric key of this security client.
         This signature is recreated by the Device Provisioning Service to verify whether a security token presented
@@ -63,3 +63,6 @@ class SymmetricKeySecurityClient(object):
         keyname = "registration"
         sas_token = SasToken(uri, key, keyname, time_to_live)
         return str(sas_token)
+
+    def get_current_sas_token(self):
+        return self._create_shared_access_signature()

@@ -18,7 +18,7 @@ USER_AGENT = "azure-iot-provisioning-devicesdk" + "/" + "0.0.1"
 """
 Default interval for polling, to use in case service doesn't provide it to us.
 """
-DEFAULT_POLLING_INTERVAL = 2000
+DEFAULT_POLLING_INTERVAL = 2
 
 """
 api version to use while communicating with service.
@@ -28,23 +28,17 @@ API_VERSION = "2019-03-31"
 """
 Default timeout to use when communicating with the service
 """
-# TODO Reduce 1 zero
-# DEFAULT_TIMEOUT_INTERVAL = 30000
-DEFAULT_TIMEOUT_INTERVAL = 120000
+
+DEFAULT_TIMEOUT_INTERVAL = 30
+
 SUBSCRIBE_TOPIC_PROVISIONING = "$dps/registrations/res/#"
 """
 The first part of the topic string used for publishing.
 The registration request id (rid) value is appended to this.
 """
-PUBLISH_TOPIC_REGISTRATION = "$dps/registrations/PUT/iotdps-register/?$rid="
+PUBLISH_TOPIC_REGISTRATION = "$dps/registrations/PUT/iotdps-register/?$rid={}"
 """
-The first part of the topic string used for publishing a query request.
-This must be appended by the registration request id (rid) as well as the
-second part which includes an operation id
+The topic string used for publishing a query request.
+This must be provided with the registration request id (rid) as well as the operation id
 """
-PUBLISH_TOPIC_QUERYING_I = "$dps/registrations/GET/iotdps-get-operationstatus/?$rid="
-"""
-The second part of the topic string used for publishing a query request.
-The operation id value is appended to this.
-"""
-PUBLISH_TOPIC_QUERYING_II = "&operationId="
+PUBLISH_TOPIC_QUERYING = "$dps/registrations/GET/iotdps-get-operationstatus/?$rid={}&operationId={}"

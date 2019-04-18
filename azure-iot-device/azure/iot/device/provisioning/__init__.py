@@ -4,13 +4,13 @@ This library provides functionality that enables zero-touch, just-in-time provis
 human intervention, enabling customers to provision millions of devices in a secure and scalable manner.
 
 """
-from .sk_registration_client import RegistrationClient
+from .sk_provisioning_device_client import SymmetricKeyProvisioningDeviceClient
 from .security import SymmetricKeySecurityClient
 from .models import RegistrationResult
-from .registration_client_factory import create_from_security_client
+from .provisioning_device_client_factory import create_from_security_client
 
 __all__ = [
-    "RegistrationClient",
+    "SymmetricKeyProvisioningDeviceClient",
     "SymmetricKeySecurityClient",
     "RegistrationResult",
     "create_from_security_client",

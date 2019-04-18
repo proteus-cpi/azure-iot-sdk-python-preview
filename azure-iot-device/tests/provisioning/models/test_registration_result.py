@@ -22,9 +22,8 @@ fake_last_update_dttm = datetime.datetime(2020, 10, 17)
 fake_etag = "HighQualityFlyingBroom"
 
 
-@pytest.fixture
-def fake_registration_state():
-    return RegistrationState(
+def test_registration_result_instantiated_correctly():
+    fake_registration_state = RegistrationState(
         fake_device_id,
         fake_assigned_hub,
         fake_sub_status,
@@ -33,8 +32,6 @@ def fake_registration_state():
         fake_etag,
     )
 
-
-def test_registration_result_instantiated_correctly(fake_registration_state):
     registration_result = RegistrationResult(
         fake_request_id, fake_operation_id, fake_status, fake_registration_state
     )
@@ -49,3 +46,28 @@ def test_registration_result_instantiated_correctly(fake_registration_state):
     assert registration_result.registration_state.created_date_time == fake_created_dttm
     assert registration_result.registration_state.last_update_date_time == fake_last_update_dttm
     assert registration_result.registration_state.etag == fake_etag
+
+
+def test_some_properties_of_result_are_not_settable():
+    registration_result = RegistrationResult("RequestId123", "Operation456", "emitted", None)
+    with pytest.raises(AttributeError, match="can't set attribute"):
+        registration_result.request_id = "MyNimbus2000"
+        registration_result.operation_id = "WhompingWillow"
+        registration_result.status = "Flying"
+        registration_result.registration_state = "FakeRegistrationState"
+
+
+def test_some_properties_of_state_are_not_settable():
+    registration_state = RegistrationState(
+        fake_device_id,
+        fake_assigned_hub,
+        fake_sub_status,
+        fake_created_dttm,
+        fake_last_update_dttm,
+        fake_etag,
+    )
+    with pytest.raises(AttributeError, match="can't set attribute"):
+        registration_state.device_id = fake_device_id
+        registration_state.assigned_hub = fake_assigned_hub
+        registration_state.sub_status = fake_sub_status
+        registration_state.created_date_time = fake_created_dttm

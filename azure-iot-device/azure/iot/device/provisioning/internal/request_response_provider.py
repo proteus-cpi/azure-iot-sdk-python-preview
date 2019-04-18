@@ -5,39 +5,56 @@
 # --------------------------------------------------------------------------
 
 import logging
-import json
-from ..models.registration_result import RegistrationResult, RegistrationState
+import six.moves.urllib as urllib
 
 logger = logging.getLogger(__name__)
 
+POS_STATUS_CODE_IN_TOPIC = 3
+POS_URL_PORTION = 1
+POS_QUERY_PARAM_PORTION = 2
 
-class RequestResponseMachine(object):
+
+class RequestResponseProvider(object):
+    """
+    Class that processes requests sent from device and responses received at device.
+    """
+
     def __init__(self, state_based_provider):
 
         self._state_based_provider = state_based_provider
+
         self._state_based_provider.on_state_based_provider_message_received = self._receive_response
 
-        self.on_response_received = None
+        self._pending_requests = {}
 
-    def send_request(self, publish_action):
-        """
-        :param publish_action: The publish action
-        """
-        self.publish([publish_action])
+    def send_request(self, rid, topic, request, callback):
+        self._pending_requests[rid] = callback
+        self.publish(topic=topic, request=request)
 
-    def connect(self, callback=None, post_connect_actions=None):
-        # TODO : MQTT Transport connect should take post connect actions.
-        self._state_based_provider.connect(callback=callback, actions=post_connect_actions)
+    def connect(self, callback=None):
+        if callback is None:
+            callback = self._on_connection_state_change
+        self._state_based_provider.connect(callback=callback)
 
-    def disconnect(self, callback=None, pre_disconnect_actions=None):
-        # TODO : MQTT Transport connect should take pre disconnect actions.
-        self._state_based_provider.disconnect(callback=callback, actions=pre_disconnect_actions)
+    def disconnect(self, callback=None):
+        if callback is None:
+            callback = self._on_connection_state_change
+        self._state_based_provider.disconnect(callback=callback)
 
-    def publish(self, publish_actions=None):
-        self._state_based_provider.publish(publish_actions)
+    def publish(self, topic, request, callback=None):
+        if callback is None:
+            callback = self._on_publish_completed
+        self._state_based_provider.publish(topic=topic, message=request, callback=callback)
 
-    def subscribe(self, subscribe_actions=None):
-        self._state_based_provider.subscribe(subscribe_actions)
+    def subscribe(self, topic, callback=None):
+        if callback is None:
+            callback = self._on_subscribe_completed
+        self._state_based_provider.subscribe(topic=topic, callback=callback)
+
+    def unsubscribe(self, topic, callback=None):
+        if callback is None:
+            callback = self._on_unsubscribe_completed
+        self._state_based_provider.unsubscribe(topic=topic, callback=callback)
 
     def _receive_response(self, topic, payload):
         """
@@ -49,32 +66,36 @@ class RequestResponseMachine(object):
         # $dps/registrations/res/200/?$rid=28c32371-608c-4390-8da7-c712353c1c3b
         # {"operationId":"4.550cb20c3349a409.390d2957-7b58-4701-b4f9-7fe848348f4a","status":"assigning"}
         # """
-        logger.info("")
-        topic_str = topic.decode("utf-8")
-        if topic_str.startswith("$dps/registrations/res/"):
-            topic_parts = topic_str.split("$")
-            rid_parts = topic_parts[2].split("=")
-            rid = rid_parts[1]
+        logger.info("Received payload:")
+        logger.info(payload)
+        # topic_str = topic.decode("utf-8")
+        if payload is not None:  # In cases of empty erroneous response from service
+            response = payload.decode("utf-8")
 
-        payload_str = payload.decode("utf-8")
-        decoded_result = json.loads(payload_str)
-        decoded_state = (
-            None
-            if "registrationState" not in decoded_result
-            else decoded_result["registrationState"]
-        )
-        registration_state = None
-        if decoded_state is not None:
-            registration_state = RegistrationState(
-                decoded_state["deviceId"],
-                decoded_state["assignedHub"],
-                decoded_state["substatus"],
-                decoded_state["createdDateTimeUtc"],
-                decoded_state["lastUpdatedDateTimeUtc"],
-                decoded_state["etag"],
-            )
+        # There may be no response when status code is >= 300
+        logger.info("Received response:{} on topic:{}".format(response, topic))
 
-        registration_result = RegistrationResult(
-            rid, decoded_result["operationId"], decoded_result["status"], registration_state
-        )
-        self.on_response_received(registration_result)
+        if topic.startswith("$dps/registrations/res/"):
+            topic_parts = topic.split("$")
+            key_value_dict = urllib.parse.parse_qs(topic_parts[POS_QUERY_PARAM_PORTION])
+            rid = key_value_dict["rid"][0]
+        # TODO Not DPS may have other ways to retrieve rid
+
+        if rid in self._pending_requests:
+            callback = self._pending_requests[rid]
+            # Only send the status code and the portion of the topic containing query parameters
+            callback(topic_parts[POS_URL_PORTION], key_value_dict, response)
+            del self._pending_requests[rid]
+
+    def _on_connection_state_change(self, new_state):
+        """Handler to be called by the transport upon a connection state change."""
+        logger.info("Connection State - {}".format(new_state))
+
+    def _on_publish_completed(self):
+        logger.info("publish completed for request response provider")
+
+    def _on_subscribe_completed(self):
+        logger.info("subscribe completed for request response provider")
+
+    def _on_unsubscribe_completed(self):
+        logger.info("on_unsubscribe_completed for request response provider")

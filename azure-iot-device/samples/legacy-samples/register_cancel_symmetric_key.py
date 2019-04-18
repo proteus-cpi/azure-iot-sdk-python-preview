@@ -6,6 +6,7 @@
 
 import os
 import logging
+from six.moves import input
 from azure.iot.device import SymmetricKeySecurityClient
 from azure.iot.device import create_from_security_client
 
@@ -30,6 +31,9 @@ def registration_status_callback(registration_result):
     print(registration_result.status)
     if registration_result.status == "assigned":
         print("Device has been registered")
+    elif registration_result.status == "assigning":
+        print("Device is registering")
+        registration_client.cancel()
     else:
         print("Failed registration attempt")
 
@@ -39,9 +43,15 @@ def registration_status_callback(registration_result):
         print("Assigned Hub =", registration_result.registration_state.assigned_hub)
 
 
-registration_client.on_registration_complete = registration_status_callback
+registration_client.on_registration_update = registration_status_callback
 
 registration_client.register()
+
+# while True:
+#     selection = input("Press Q to quit\n")
+#     if selection == "Q" or selection == "q":
+#         print("Quitting...")
+#         break
 
 
 # Output looks like
