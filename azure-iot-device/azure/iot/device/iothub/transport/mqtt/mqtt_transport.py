@@ -361,7 +361,7 @@ class MQTTTransport(AbstractTransport):
 
     def _execute_action(self, action):
         """
-        Execute an action from the action queue. This is called when the transport is connected and the
+        Execute an action from the action queue.  This is called when the transport is connected and the
         state machine is able to execute individual actions.
 
         :param TransportAction action: object containing the details of the action to be executed
