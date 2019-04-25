@@ -12,7 +12,7 @@ from .mqtt_provider import MQTTProvider
 from transitions import Machine
 from azure.iot.device.common.transport.abstract_transport import AbstractTransport
 from azure.iot.device.common.transport import constant
-from azure.iot.device.iothub.models import Message
+from azure.iot.device.iothub.models import Message, MethodRequest
 
 
 """
@@ -78,6 +78,9 @@ QOS_SUBSCRIBE = 1
 TOPIC_POS_DEVICE = 4
 TOPIC_POS_MODULE = 6
 TOPIC_POS_INPUT_NAME = 5
+
+TOPIC_POS_METHOD_NAME = 3
+TOPIC_POS_REQUEST_ID = 4
 
 
 class TransportAction(object):
@@ -323,7 +326,7 @@ class MQTTTransport(AbstractTransport):
             self._disconnect_callback = None
             callback()
 
-    def _on_provider_message_received_callback(self, topic, payload):
+    def _on_provider_message_received(self, topic, payload):
         """
         Callback that is called by the provider when a message is received.  This message can be any MQTT message,
         including, but not limited to, a C2D message, an input message, a TWIN patch, a twin response (/res), and
@@ -345,6 +348,11 @@ class MQTTTransport(AbstractTransport):
         elif _is_c2d_topic(topic):
             _extract_properties(topic_parts[TOPIC_POS_DEVICE], message_received)
             self.on_transport_c2d_message_received(message_received)
+        elif _is_method_topic(topic):
+            method_received = MethodRequest(
+                topic_parts[TOPIC_POS_REQUEST_ID], topic_parts[TOPIC_POS_METHOD_NAME], payload
+            )
+            self.on_transport_method_request_received(method_received)
         else:
             pass  # is there any other case
 
@@ -450,7 +458,7 @@ class MQTTTransport(AbstractTransport):
 
         self._mqtt_provider.on_mqtt_connected = self._on_provider_connect_complete
         self._mqtt_provider.on_mqtt_disconnected = self._on_provider_disconnect_complete
-        self._mqtt_provider.on_mqtt_message_received = self._on_provider_message_received_callback
+        self._mqtt_provider.on_mqtt_message_received = self._on_provider_message_received
 
     def _get_topic_base(self):
         """
@@ -487,6 +495,20 @@ class MQTTTransport(AbstractTransport):
         "devices/<deviceId>/modules/<moduleId>/messages/inputs/#"
         """
         return self._get_topic_base() + "/inputs/#"
+
+    def _get_method_topic_for_subscribe(self):
+        """
+        :return: The topic for ALL incoming methods. It is of the format
+        "$iothub/methods/POST/#"
+        """
+        return "$iothub/methods/POST/#"
+
+    def _get_method_topic_for_publish(self, request_id, status):
+        """
+        :return: The topic for publishing method responses. It is of the format
+        "$iothub/methods/res/<status>/?$rid=<requestId>
+        """
+        return "$iothub/methods/res/" + status + "/?$rid=" + request_id
 
     def connect(self, callback=None):
         """
@@ -650,6 +672,18 @@ def _is_input_topic(split_topic_str):
     :param split_topic_str: The already split received topic string
     """
     if "inputs" in split_topic_str and len(split_topic_str) > 6:
+        return True
+    return False
+
+
+def _is_method_topic(split_topic_str):
+    """
+    Topics for methods are of the following format:
+    "$iothub/methods/POST/<methodName>"
+
+    :param split_topic_str: The already split received topic string.
+    """
+    if "$iothub/methods/POST" in split_topic_str and len(split_topic_str) > 3:
         return True
     return False
 
