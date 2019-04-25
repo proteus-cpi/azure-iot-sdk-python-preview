@@ -72,9 +72,8 @@ class AbstractTransport:
         """
         pass
 
-    # TODO: consider changing this signature (should the response already be packaged?)
     @abc.abstractmethod
-    def send_method_response(self, method, payload, status, callback=None):
+    def send_method_response(self, method_response, callback=None):
         """
         Send a method response.
         """

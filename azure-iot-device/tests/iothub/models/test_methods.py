@@ -5,7 +5,7 @@
 # --------------------------------------------------------------------------
 
 import pytest
-from azure.iot.device.iothub.models import MethodRequest
+from azure.iot.device.iothub.models import MethodRequest, MethodResponse
 
 
 class TestMethodRequest(object):
@@ -20,3 +20,13 @@ class TestMethodRequest(object):
     @pytest.mark.skip(reason="Not implemented")
     def test_payload_property_is_read_only(self):
         pass
+
+
+class TestMethodResponse(object):
+    @pytest.mark.it("Initializes with parameters set")
+    @pytest.mark.skip(reason="Not Implemented")
+    def test_initializes_with_attributes(self):
+        pass
+
+    # TODO: test for payload, both dict, json, etc.
+    # TODO: test for creating methodresponse from methodrequest

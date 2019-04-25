@@ -9,10 +9,10 @@ import json
 import logging
 import threading
 from six.moves import input
-from azure.iot.device import IoTHubDeviceClient
+from azure.iot.device import IoTHubDeviceClient, MethodResponse
 from azure.iot.device import auth
 
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 
 
 # The connection string for a device should never be stored in code. For the sake of simplicity we're using an environment variable here.
@@ -35,7 +35,8 @@ def method1_listener(device_client):
         payload = json.dumps({"result": True, "data": "some data"})  # set response payload
         status = 200  # set return status code
         print("executed method1")
-        device_client.send_method_response(method_request, payload, status)  # send response
+        method_response = MethodResponse.create_from_method_request(method_request, status, payload)
+        device_client.send_method_response(method_response)  # send response
 
 
 def method2_listener(device_client):
@@ -44,7 +45,8 @@ def method2_listener(device_client):
         payload = json.dumps({"result": True, "data": 1234})  # set response payload
         status = 200  # set return status code
         print("executed method2")
-        device_client.send_method_response(method_request, payload, status)  # send response
+        method_response = MethodResponse.create_from_method_request(method_request, status, payload)
+        device_client.send_method_response(method_response)  # send response
 
 
 def generic_method_listener(device_client):
@@ -53,7 +55,8 @@ def generic_method_listener(device_client):
         payload = json.dumps({"result": False, "data": "unknown method"})  # set response payload
         status = 400  # set return status code
         print("executed unknown method: " + method_request.name)
-        device_client.send_method_response(method_request, payload, status)  # send response
+        method_response = MethodResponse.create_from_method_request(method_request, status, payload)
+        device_client.send_method_response(method_response)  # send response
 
 
 # Run method listener threads in the background

@@ -344,21 +344,21 @@ class MQTTTransport(AbstractTransport):
         :param bytes payload: Payload of the message as a bytestring
         """
         logger.info("Message received on topic {}".format(topic))
-        message_received = Message(payload)
         topic_parts = topic.split("/")
 
         if _is_input_topic(topic):
+            message_received = Message(payload)
             input_name = topic_parts[TOPIC_POS_INPUT_NAME]
             message_received.input_name = input_name
-            _extract_properties(topic_parts[TOPIC_POS_MODULE], message_received)
+            _extract_message_properties(topic_parts[TOPIC_POS_MODULE], message_received)
             self.on_transport_input_message_received(input_name, message_received)
         elif _is_c2d_topic(topic):
-            _extract_properties(topic_parts[TOPIC_POS_DEVICE], message_received)
+            message_received = Message(payload)
+            _extract_message_properties(topic_parts[TOPIC_POS_DEVICE], message_received)
             self.on_transport_c2d_message_received(message_received)
         elif _is_method_topic(topic):
-            method_received = MethodRequest(
-                topic_parts[TOPIC_POS_REQUEST_ID], topic_parts[TOPIC_POS_METHOD_NAME], payload
-            )
+            rid = topic_parts[TOPIC_POS_REQUEST_ID].split("=")[1]
+            method_received = MethodRequest(rid, topic_parts[TOPIC_POS_METHOD_NAME], payload)
             self.on_transport_method_request_received(method_received)
         else:
             pass  # is there any other case
@@ -385,7 +385,7 @@ class MQTTTransport(AbstractTransport):
         if isinstance(action, SendMessageAction):
             logger.info("running SendMessageAction")
             message_to_send = action.message
-            encoded_topic = _encode_properties(
+            encoded_topic = _encode_message_properties_in_topic(
                 message_to_send, self._get_telemetry_topic_for_publish()
             )
             self._mqtt_provider.publish(
@@ -407,10 +407,14 @@ class MQTTTransport(AbstractTransport):
 
         elif isinstance(action, MethodReponseAction):
             logger.info("running MethodResponseAction")
-            topic = self._get_method_topic_for_publish(self, action.request_id, action.status)
+            method_response = action.method_response
+            topic = self._get_method_topic_for_publish(
+                urllib.parse.quote(method_response.request_id),
+                urllib.parse.quote(str(method_response.status)),
+            )
             self._mqtt_provider.publish(
                 topic=topic,
-                payload=action.method_response,
+                payload=method_response.payload,  # TODO: does this need to be url encoded?
                 qos=action.qos,
                 callback=action.callback,
             )
@@ -515,7 +519,7 @@ class MQTTTransport(AbstractTransport):
         :return: The topic for publishing method responses. It is of the format
         "$iothub/methods/res/<status>/?$rid=<requestId>
         """
-        return "$iothub/methods/res/" + status + "/?$rid=" + request_id
+        return "$iothub/methods/res/{status}/?$rid={rid}".format(status=status, rid=request_id)
 
     def connect(self, callback=None):
         """
@@ -555,8 +559,15 @@ class MQTTTransport(AbstractTransport):
         action = SendMessageAction(message=message, callback=callback)
         self._trig_add_action_to_pending_queue(action)
 
-    def send_method_response(self, method, payload, status, callback=None):
-        raise NotImplementedError
+    def send_method_response(self, method_response, callback=None):
+        """
+        Send a method response to the service.
+
+        :param method_response: The method response being sent.
+        :type method_response: MethodResponse
+        """
+        action = MethodReponseAction(method_response=method_response, callback=callback)
+        self._trig_add_action_to_pending_queue(action)
 
     def _on_shared_access_string_updated(self):
         """
@@ -695,7 +706,7 @@ def _is_method_topic(split_topic_str):
     return False
 
 
-def _extract_properties(properties, message_received):
+def _extract_message_properties(properties, message_received):
     """
     Extract key=value pairs from custom properties and set the properties on the received message.
     :param properties: The properties string which is ampersand(&) delimited key=value pair.
@@ -724,7 +735,7 @@ def _extract_properties(properties, message_received):
             message_received.custom_properties[key] = value
 
 
-def _encode_properties(message_to_send, topic):
+def _encode_message_properties_in_topic(message_to_send, topic):
     """
     uri-encode the system properties of a message as key-value pairs on the topic with defined keys.
     Additionally if the message has user defined properties, the property keys and values shall be
