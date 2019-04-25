@@ -73,6 +73,7 @@ class uses the following conventions:
 """
 
 QOS_SEND_MESSAGE = 1
+QOS_METHOD_RESPONSE = 1
 QOS_SUBSCRIBE = 1
 
 TOPIC_POS_DEVICE = 4
@@ -83,6 +84,11 @@ TOPIC_POS_METHOD_NAME = 3
 TOPIC_POS_REQUEST_ID = 4
 
 
+# TODO: Decide what level of abstraction these actions are at.
+# They are currently quite inconsistent.
+# e.g. SendMessageAction represents a client level action (lower level would be publish)
+# e.g. SubscribeAction represents a provider level action (higher level would be Enable C2D)
+# Which level should they be at? We MUST decide.
 class TransportAction(object):
     """
     base class representing various actions that can be taken
@@ -139,6 +145,7 @@ class MethodReponseAction(TransportAction):
     def __init__(self, method_response, callback):
         TransportAction.__init__(self, callback)
         self.method_response = method_response
+        self.qos = QOS_METHOD_RESPONSE
 
 
 class MQTTTransport(AbstractTransport):
@@ -400,7 +407,7 @@ class MQTTTransport(AbstractTransport):
 
         elif isinstance(action, MethodReponseAction):
             logger.info("running MethodResponseAction")
-            topic = "TODO"
+            topic = self._get_method_topic_for_publish(self, action.request_id, action.status)
             self._mqtt_provider.publish(
                 topic=topic,
                 payload=action.method_response,

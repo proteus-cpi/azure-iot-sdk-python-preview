@@ -32,3 +32,7 @@ class MethodRequest(object):
     @property
     def payload(self):
         return self._payload
+
+    @property
+    def request_id(self):
+        return self._request_id

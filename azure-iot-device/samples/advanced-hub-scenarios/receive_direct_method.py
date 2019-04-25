@@ -38,7 +38,7 @@ async def main():
             status = 200  # set return status code
             print("executed method1")
             await device_client.send_method_response(
-                method_request, payload, status
+                method_request.request_id, payload, status
             )  # send response
 
     async def method2_listener(device_client):
