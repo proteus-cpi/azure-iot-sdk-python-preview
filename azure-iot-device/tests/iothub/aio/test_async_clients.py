@@ -111,11 +111,34 @@ class ClientSharedTests(object):
         assert isinstance(sent_message, Message)
         assert sent_message.data == naked_string
 
-    @pytest.mark.skip(reason="Not Implemented")
+    @pytest.mark.parametrize(
+        "method_name",
+        [pytest.param(None, id="Generic Method"), pytest.param("method_x", id="Named Method")],
+    )
     async def test_receive_method_request_enables_methods_only_if_not_already_enabled(
-        self, client, transport
+        self, mocker, client, transport, method_name
     ):
-        pass
+        # patch this so receive_method_request won't block
+        mocker.patch.object(
+            AsyncClientInbox, "get", return_value=(await create_completed_future(None))
+        )
+
+        # Verify Input Messaging enabled if not enabled
+        transport.feature_enabled.__getitem__.return_value = (
+            False
+        )  # Method Requests will appear disabled
+        await client.receive_method_request(method_name)
+        assert transport.enable_feature.call_count == 1
+        assert transport.enable_feature.call_args[0][0] == constant.METHODS
+
+        transport.enable_feature.reset_mock()
+
+        # Verify Input Messaging not enabled if already enabled
+        transport.feature_enabled.__getitem__.return_value = (
+            True
+        )  # Input Messages will appear enabled
+        await client.receive_method_request(method_name)
+        assert transport.enable_feature.call_count == 0
 
     @pytest.mark.skip(reason="Not Implemented")
     async def test_receive_method_request_called_without_method_name_returns_method_request_from_generic_method_inbox(
@@ -134,6 +157,7 @@ class ClientSharedTests(object):
         pass
 
 
+@pytest.mark.describe("IoTHubModuleClient (Asynchronous)")
 class TestIoTHubModuleClient(ClientSharedTests):
     client_class = IoTHubModuleClient
 
@@ -207,6 +231,7 @@ class TestIoTHubModuleClient(ClientSharedTests):
         assert received_message is message
 
 
+@pytest.mark.describe("IoTHubDeviceClient (Asynchronous)")
 class TestIoTHubDeviceClient(ClientSharedTests):
     client_class = IoTHubDeviceClient
 

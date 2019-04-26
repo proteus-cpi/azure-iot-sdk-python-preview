@@ -12,7 +12,7 @@ class MethodRequest(object):
 
     :ivar str request_id: The request id.
     :ivar str name: The name of the method to be invoked.
-    :ivar payload: The payload being sent with the request.
+    :ivar str payload: The payload being sent with the request.
     """
 
     def __init__(self, request_id, name, payload):
@@ -20,7 +20,7 @@ class MethodRequest(object):
 
         :param str request_id: The request id.
         :param str name: The name of the method to be invoked
-        :param payload: The payload being sent with the request.
+        :param str payload: The payload being sent with the request.
         """
         self._request_id = request_id
         self._name = name
@@ -37,6 +37,8 @@ class MethodRequest(object):
     @property
     def payload(self):
         return self._payload
+
+    # TODO: payload type? json? string? what to return
 
 
 class MethodResponse(object):
