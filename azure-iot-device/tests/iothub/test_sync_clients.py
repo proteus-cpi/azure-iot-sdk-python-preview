@@ -7,7 +7,7 @@
 import pytest
 from azure.iot.device.iothub import IoTHubDeviceClient, IoTHubModuleClient
 from azure.iot.device.common.transport.mqtt import MQTTTransport
-from azure.iot.device.iothub import Message
+from azure.iot.device.iothub.models import Message, MethodRequest
 from azure.iot.device.iothub.sync_inbox import SyncClientInbox
 from azure.iot.device.common.transport import constant
 
@@ -134,6 +134,10 @@ class ClientSharedTests(object):
         self, client, transport
     ):
         pass
+        # method_name = "method-x"
+        # payload = "{'key': 'value'}"
+        # method_request = MethodRequest(request_id="1", name=method_name, payload=payload)
+        # pass
 
     @pytest.mark.skip(reason="Not Implemented")
     @pytest.mark.parametrize(

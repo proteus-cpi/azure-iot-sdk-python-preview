@@ -5,14 +5,13 @@
 # --------------------------------------------------------------------------
 
 import os
-import json
 import logging
 import threading
 from six.moves import input
 from azure.iot.device import IoTHubDeviceClient, MethodResponse
 from azure.iot.device import auth
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 
 
 # The connection string for a device should never be stored in code. For the sake of simplicity we're using an environment variable here.
@@ -32,7 +31,7 @@ device_client.connect()
 def method1_listener(device_client):
     while True:
         method_request = device_client.receive_method_request("method1")  # Wait for method1 calls
-        payload = json.dumps({"result": True, "data": "some data"})  # set response payload
+        payload = {"result": True, "data": "some data"}  # set response payload
         status = 200  # set return status code
         print("executed method1")
         method_response = MethodResponse.create_from_method_request(method_request, status, payload)
@@ -42,7 +41,7 @@ def method1_listener(device_client):
 def method2_listener(device_client):
     while True:
         method_request = device_client.receive_method_request("method2")  # Wait for method2 calls
-        payload = json.dumps({"result": True, "data": 1234})  # set response payload
+        payload = {"result": True, "data": 1234}  # set response payload
         status = 200  # set return status code
         print("executed method2")
         method_response = MethodResponse.create_from_method_request(method_request, status, payload)
@@ -52,7 +51,7 @@ def method2_listener(device_client):
 def generic_method_listener(device_client):
     while True:
         method_request = device_client.receive_method_request()  # Wait for unknown method calls
-        payload = json.dumps({"result": False, "data": "unknown method"})  # set response payload
+        payload = {"result": False, "data": "unknown method"}  # set response payload
         status = 400  # set return status code
         print("executed unknown method: " + method_request.name)
         method_response = MethodResponse.create_from_method_request(method_request, status, payload)

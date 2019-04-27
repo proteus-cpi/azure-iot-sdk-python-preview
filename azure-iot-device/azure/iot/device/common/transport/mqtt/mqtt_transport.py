@@ -5,6 +5,7 @@
 # --------------------------------------------------------------------------
 
 import logging
+import json
 from datetime import date
 import six.moves.urllib as urllib
 import six.moves.queue as queue
@@ -358,7 +359,9 @@ class MQTTTransport(AbstractTransport):
             self.on_transport_c2d_message_received(message_received)
         elif _is_method_topic(topic):
             rid = topic_parts[TOPIC_POS_REQUEST_ID].split("=")[1]
-            method_received = MethodRequest(rid, topic_parts[TOPIC_POS_METHOD_NAME], payload)
+            method_received = MethodRequest(
+                rid, topic_parts[TOPIC_POS_METHOD_NAME], json.loads(payload)
+            )
             self.on_transport_method_request_received(method_received)
         else:
             pass  # is there any other case
@@ -412,11 +415,9 @@ class MQTTTransport(AbstractTransport):
                 urllib.parse.quote(method_response.request_id),
                 urllib.parse.quote(str(method_response.status)),
             )
+            payload = json.dumps(method_response.payload)
             self._mqtt_provider.publish(
-                topic=topic,
-                payload=method_response.payload,  # TODO: does this need to be url encoded?
-                qos=action.qos,
-                callback=action.callback,
+                topic=topic, payload=payload, qos=action.qos, callback=action.callback
             )
 
         else:

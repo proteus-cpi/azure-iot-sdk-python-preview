@@ -6,7 +6,6 @@
 
 import os
 import asyncio
-import json
 import logging
 import threading
 from six.moves import input
@@ -35,7 +34,7 @@ async def main():
             method_request = await device_client.receive_method_request(
                 "method1"
             )  # Wait for method1 calls
-            payload = json.dumps({"result": True, "data": "some data"})  # set response payload
+            payload = {"result": True, "data": "some data"}  # set response payload
             status = 200  # set return status code
             print("executed method1")
             method_response = MethodResponse.create_from_method_request(
@@ -48,7 +47,7 @@ async def main():
             method_request = await device_client.receive_method_request(
                 "method2"
             )  # Wait for method2 calls
-            payload = json.dumps({"result": True, "data": 1234})  # set response payload
+            payload = {"result": True, "data": 1234}  # set response payload
             status = 200  # set return status code
             print("executed method2")
             method_response = MethodResponse.create_from_method_request(
@@ -61,9 +60,7 @@ async def main():
             method_request = (
                 await device_client.receive_method_request()
             )  # Wait for unknown method calls
-            payload = json.dumps(
-                {"result": False, "data": "unknown method"}  # set response payload
-            )
+            payload = {"result": False, "data": "unknown method"}  # set response payload
             status = 400  # set return status code
             print("executed unknown method: " + method_request.name)
             method_response = MethodResponse.create_from_method_request(

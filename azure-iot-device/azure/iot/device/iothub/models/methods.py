@@ -12,7 +12,7 @@ class MethodRequest(object):
 
     :ivar str request_id: The request id.
     :ivar str name: The name of the method to be invoked.
-    :ivar str payload: The payload being sent with the request.
+    :ivar dict payload: The JSON payload being sent with the request.
     """
 
     def __init__(self, request_id, name, payload):
@@ -20,7 +20,7 @@ class MethodRequest(object):
 
         :param str request_id: The request id.
         :param str name: The name of the method to be invoked
-        :param str payload: The payload being sent with the request.
+        :param dict payload: The JSON payload being sent with the request.
         """
         self._request_id = request_id
         self._name = name
@@ -38,43 +38,33 @@ class MethodRequest(object):
     def payload(self):
         return self._payload
 
-    # TODO: payload type? json? string? what to return
-
 
 class MethodResponse(object):
     """Represents a response to a direct method.
 
     :ivar str request_id: The request id of the MethodRequest being responded to.
     :ivar int status: The status of the execution of the MethodRequest.
-    :ivar payload: The payload to be sent with the response.
+    :ivar dict payload: The JSON payload to be sent with the response.
     """
 
-    def __init__(self, request_id, status, payload):
+    def __init__(self, request_id, status, payload=None):
         """Initializer for MethodResponse.
 
         :param str request_id: The request id of the MethodRequest being responded to.
         :param int status: The status of the execution of the MethodRequest.
-        :param payload: The payload to be sent with the response.
+        :param dict payload: The JSON payload to be sent with the response. (OPTIONAL)
         """
         self.request_id = request_id
         self.status = status
         self.payload = payload
 
     @classmethod
-    def create_from_method_request(cls, method_request, status, payload):
+    def create_from_method_request(cls, method_request, status, payload=None):
         """Factory method for creating a MethodResponse from a MethodRequest.
 
         :param method_request: The MethodRequest object to respond to.
         :type method_request: MethodRequest.
         :param int status: The status of the execution of the MethodRequest.
-        :param payload: The payload to be sent with the response.
+        :param dict payload: The JSON payload to be sent with the response. (OPTIONAL)
         """
         return cls(request_id=method_request.request_id, status=status, payload=payload)
-
-    @property
-    def payload(self):
-        return self._payload
-
-    @payload.setter
-    def payload(self, value):
-        self._payload = value.encode()
