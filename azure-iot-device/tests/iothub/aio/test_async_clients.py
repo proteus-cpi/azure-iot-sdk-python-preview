@@ -10,7 +10,7 @@ import abc
 import six
 from azure.iot.device.iothub.aio import IoTHubDeviceClient, IoTHubModuleClient
 from azure.iot.device.common.transport.mqtt import MQTTTransport
-from azure.iot.device.iothub import Message
+from azure.iot.device.iothub.models import Message, MethodRequest, MethodResponse
 from azure.iot.device.iothub.aio.async_inbox import AsyncClientInbox
 from azure.iot.device.common.transport import constant
 
@@ -101,7 +101,7 @@ class ClientSharedTests(object):
         message = Message("this is a message")
         await client.send_event(message)
         assert transport.send_event.call_count == 1
-        assert transport.send_event.call_args[0][0] == message
+        assert transport.send_event.call_args[0][0] is message
 
     async def test_send_event_calls_transport_wraps_data_in_message(self, client, transport):
         naked_string = "this is a message"
@@ -140,21 +140,48 @@ class ClientSharedTests(object):
         await client.receive_method_request(method_name)
         assert transport.enable_feature.call_count == 0
 
-    @pytest.mark.skip(reason="Not Implemented")
     async def test_receive_method_request_called_without_method_name_returns_method_request_from_generic_method_inbox(
-        self, client, tranposrt
+        self, mocker, client
     ):
-        pass
+        request = MethodRequest(request_id="1", name="some_method", payload={"key": "value"})
+        inbox_mock = mocker.MagicMock(autospec=AsyncClientInbox)
+        inbox_mock.get.return_value = await create_completed_future(request)
+        manager_get_inbox_mock = mocker.patch.object(
+            target=client._inbox_manager,
+            attribute="get_method_request_inbox",
+            return_value=inbox_mock,
+        )
 
-    @pytest.mark.skip(reason="Not Implemented")
+        received_request = await client.receive_method_request()
+        assert manager_get_inbox_mock.call_count == 1
+        assert manager_get_inbox_mock.call_args == mocker.call(None)
+        assert inbox_mock.get.call_count == 1
+        assert received_request is received_request
+
     async def test_receive_method_request_called_with_method_name_returns_method_request_from_named_method_inbox(
-        self, client, transport
+        self, mocker, client
     ):
-        pass
+        method_name = "some_method"
+        request = MethodRequest(request_id="1", name=method_name, payload={"key": "value"})
+        inbox_mock = mocker.MagicMock(autospec=AsyncClientInbox)
+        inbox_mock.get.return_value = await create_completed_future(request)
+        manager_get_inbox_mock = mocker.patch.object(
+            target=client._inbox_manager,
+            attribute="get_method_request_inbox",
+            return_value=inbox_mock,
+        )
 
-    @pytest.mark.skip(reason="Not Implemented")
+        received_request = await client.receive_method_request(method_name)
+        assert manager_get_inbox_mock.call_count == 1
+        assert manager_get_inbox_mock.call_args == mocker.call(method_name)
+        assert inbox_mock.get.call_count == 1
+        assert received_request is received_request
+
     async def test_send_method_response_calls_transport(self, client, transport):
-        pass
+        response = MethodResponse(request_id="1", status=200, payload={"key": "value"})
+        await client.send_method_response(response)
+        assert transport.send_method_response.call_count == 1
+        assert transport.send_method_response.call_args[0][0] is response
 
 
 @pytest.mark.describe("IoTHubModuleClient (Asynchronous)")
@@ -177,7 +204,7 @@ class TestIoTHubModuleClient(ClientSharedTests):
         output_name = "some_output"
         await client.send_to_output(message, output_name)
         assert transport.send_output_event.call_count == 1
-        assert transport.send_output_event.call_args[0][0] == message
+        assert transport.send_output_event.call_args[0][0] is message
         assert message.output_name == output_name
 
     async def test_send_to_output_calls_transport_wraps_data_in_message(self, client, transport):
