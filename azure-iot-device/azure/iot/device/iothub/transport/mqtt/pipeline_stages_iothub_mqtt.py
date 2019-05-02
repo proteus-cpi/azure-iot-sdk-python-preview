@@ -11,9 +11,9 @@ from azure.iot.device.common.transport.mqtt import pipeline_events_mqtt
 from azure.iot.device.common.transport.pipeline_stages_base import PipelineStage
 from azure.iot.device.iothub.models import Message
 from azure.iot.device.iothub.transport import constant
+from azure.iot.device.iothub.transport import pipeline_ops_iothub
+from azure.iot.device.iothub.transport import pipeline_events_iothub
 from . import mqtt_topic
-from . import pipeline_ops_iothub
-from . import pipeline_events_iothub
 
 logger = logging.getLogger(__name__)
 
