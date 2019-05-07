@@ -475,7 +475,7 @@ class TestPipelineStageContinueOp(object):
         op.callback = callback
         stage.continue_op(op)
         callback.assert_called_once_with(op)
-        stage.next.run_op.assert_not_called()
+        assert stage.next.run_op.call_count == 0
 
     @pytest.mark.it("fails the op if there is no next stage")
     def test_2(self, stage, op, callback):
