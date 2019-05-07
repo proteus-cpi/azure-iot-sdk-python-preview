@@ -50,10 +50,12 @@ def stage(mocker):
     first_stage.unhandled_error_handler = mocker.Mock()
     first_stage._run_op = functools.partial(stage_run_op, first_stage)
     mocker.spy(first_stage, "_run_op")
+    mocker.spy(first_stage, "run_op")
 
     next_stage = PipelineStage()
     next_stage._run_op = functools.partial(stage_run_op, next_stage)
     mocker.spy(next_stage, "_run_op")
+    mocker.spy(next_stage, "run_op")
 
     first_stage.next = next_stage
     first_stage.pipeline_root = first_stage
@@ -467,44 +469,76 @@ class TestPipelineStageHandlePrivatePipelineEvent(object):
 
 @pytest.mark.describe("PipelineStage continue_op function")
 class TestPipelineStageContinueOp(object):
-    @pytest.mark.it("completes the op if the op has an error")
-    def test_1(self, stage, op):
-        pass
+    @pytest.mark.it("completes the op without continuing if the op has an error")
+    def test_1(self, stage, op, fake_error, callback):
+        op.error = fake_error
+        op.callback = callback
+        stage.continue_op(op)
+        callback.assert_called_once_with(op)
+        stage.next.run_op.assert_not_called()
 
     @pytest.mark.it("fails the op if there is no next stage")
-    def test_2(self, stage, op):
+    def test_2(self, stage, op, callback):
+        op.callback = callback
+        stage.next = None
+        stage.continue_op(op)
+        assert_callback_failed(callback, op)
         pass
 
     @pytest.mark.it("passes the op to the next stage if no error")
-    def test_3(self, stage, op):
-        pass
+    def test_3(self, stage, op, callback):
+        stage.continue_op(op)
+        stage.next.run_op.assert_called_once_with(op)
 
 
 @pytest.mark.describe("PipelineStage complete_op function")
 class TestPipelineStageCompleteOp(object):
-    @pytest.mark.it("calls the op callback")
-    def test_1(self, stage, op):
-        pass
+    @pytest.mark.it("calls the op callback on success")
+    def test_1(self, stage, op, callback):
+        op.callback = callback
+        stage.complete_op(op)
+        assert_callback_succeeded(callback, op)
+
+    @pytest.mark.it("calls the op callback on failure")
+    def test_2(self, stage, op, callback, fake_error):
+        op.error = fake_error
+        op.callback = callback
+        stage.complete_op(op)
+        assert_callback_failed(callback, op, fake_error)
 
     @pytest.mark.it("protects the op callback with a try/except handler")
-    def test_2(self, stage, op):
-        pass
+    def test_3(self, stage, op, fake_error, mocker):
+        op.callback = mocker.Mock(side_effect=fake_error)
+        stage.complete_op(op)
+        op.callback.assert_called_once_with(op)
+        stage.unhandled_error_handler.assert_called_once_with(fake_error)
 
 
 @pytest.mark.describe("PipelineStage continue_with_different_op function")
 class TestPipelineStageContineWithDifferntOp(object):
+    @pytest.mark.it("does not continue running the original op")
     @pytest.mark.it("runs the new op")
     def test_1(self, stage, op):
-        pass
-
-    @pytest.mark.it("does not continue running the original op")
-    def test_2(self, stage, op):
-        pass
+        new_op = Op()
+        stage.continue_with_different_op(original_op=op, new_op=new_op)
+        stage.next.run_op.assert_called_once_with(new_op)
 
     @pytest.mark.it("completes the original op after the new op completes")
-    def test_3(self, stage, op):
-        pass
+    def test_3(self, stage, op, callback):
+        op.callback = callback
+        new_op = Op()
+        new_op.action = "pend"
+
+        stage.continue_with_different_op(original_op=op, new_op=new_op)
+        callback.assert_not_called()  # because new_op is pending
+
+        stage.next.complete_op(new_op)
+        assert_callback_succeeded(callback, op)
 
     @pytest.mark.it("returns the new op failure in the original op if new op fails")
-    def test_4(self, stage, op):
-        pass
+    def test_4(self, stage, op, callback):
+        op.callback = callback
+        new_op = Op()
+        new_op.action = "fail"
+        stage.continue_with_different_op(original_op=op, new_op=new_op)
+        assert_callback_failed(callback, op, new_op.error)
