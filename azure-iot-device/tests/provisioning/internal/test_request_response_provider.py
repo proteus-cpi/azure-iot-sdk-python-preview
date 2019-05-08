@@ -22,12 +22,8 @@ POS_URL_PORTION = 1
 
 
 @pytest.fixture
-def state_based_mqtt(mocker):
-    return mocker.MagicMock(spec=StateBasedMQTTProvider)
-
-
-@pytest.fixture
-def request_response_provider(state_based_mqtt):
+def request_response_provider():
+    state_based_mqtt = MagicMock()
     request_response_provider = RequestResponseProvider(state_based_mqtt)
     request_response_provider.on_response_received = MagicMock()
     return request_response_provider

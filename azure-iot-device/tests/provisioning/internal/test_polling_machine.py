@@ -7,10 +7,9 @@
 import pytest
 import datetime
 from mock import MagicMock
+from azure.iot.device.provisioning.internal.request_response_provider import RequestResponseProvider
 from azure.iot.device.provisioning.internal.polling_machine import PollingMachine
 from azure.iot.device.provisioning.models.registration_result import RegistrationResult
-
-from azure.iot.device.provisioning.transport.state_based_mqtt_provider import StateBasedMQTTProvider
 from azure.iot.device.provisioning.transport import constant
 import time
 
@@ -34,31 +33,39 @@ fake_assigning_status = "assigning"
 fake_assigned_status = "assigned"
 
 
-@pytest.fixture
-def state_based_mqtt(mocker):
-    return mocker.MagicMock(spec=StateBasedMQTTProvider)
+class TestRequestResponseProvider(RequestResponseProvider):
+    def receive_response(self, topic, payload):
+        return super(TestRequestResponseProvider, self)._receive_response(topic, payload)
 
 
 @pytest.fixture
-def polling_machine(mocker, state_based_mqtt):
+def mock_request_response_provider(mocker):
+    return mocker.MagicMock(spec=TestRequestResponseProvider)
 
-    mocker.patch("azure.iot.device.provisioning.internal.polling_machine.RequestResponseProvider")
+
+@pytest.fixture
+def mock_polling_machine(mocker, mock_request_response_provider):
+    state_based_mqtt = MagicMock()
+    mock_init_request_response_provider = mocker.patch(
+        "azure.iot.device.provisioning.internal.polling_machine.RequestResponseProvider"
+    )
+    mock_init_request_response_provider.return_value = mock_request_response_provider
     mock_polling_machine = PollingMachine(state_based_mqtt)
     return mock_polling_machine
 
 
 class TestRegister:
-    def test_register_calls_subscribe_on_request_response_provider(self, polling_machine):
-        mock_request_response_provider = polling_machine._request_response_provider
-        polling_machine.register()
+    def test_register_calls_subscribe_on_request_response_provider(self, mock_polling_machine):
+        mock_request_response_provider = mock_polling_machine._request_response_provider
+        mock_polling_machine.register()
 
         mock_request_response_provider.subscribe.assert_called_once_with(
             topic=constant.SUBSCRIBE_TOPIC_PROVISIONING,
-            callback=polling_machine._on_subscribe_completed,
+            callback=mock_polling_machine._on_subscribe_completed,
         )
 
     def test_on_subscribe_completed_calls_send_register_request_on_request_response_provider(
-        self, polling_machine, mocker
+        self, mock_polling_machine, mocker
     ):
         mock_init_uuid = mocker.patch(
             "azure.iot.device.provisioning.internal.polling_machine.uuid.uuid4"
@@ -70,29 +77,30 @@ class TestRegister:
         mock_query_timer = mock_init_query_timer.return_value
         mocker.patch.object(mock_query_timer, "start")
 
-        polling_machine.state = "initializing"
-        mock_request_response_provider = polling_machine._request_response_provider
+        mock_polling_machine.state = "initializing"
+        mock_request_response_provider = mock_polling_machine._request_response_provider
 
-        polling_machine._on_subscribe_completed()
+        mock_polling_machine._on_subscribe_completed()
 
         mock_request_response_provider.send_request.assert_called_once_with(
             rid=fake_request_id,
             topic=constant.PUBLISH_TOPIC_REGISTRATION.format(fake_request_id),
             request=" ",
-            callback=polling_machine._handle_register_response_received,
+            callback=mock_polling_machine._handle_register_response_received,
         )
 
 
 class TestRegisterResponse:
     # Change the timeout so that the test does not hang for more time
-    constant.DEFAULT_TIMEOUT_INTERVAL = 3
-    constant.DEFAULT_POLLING_INTERVAL = 0.2
+    constant.DEFAULT_TIMEOUT_INTERVAL = 3 * 100
+    constant.DEFAULT_POLLING_INTERVAL = 0.2 * 100
 
     def test_receive_register_response_assigning_does_query_with_operation_id(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
-        mock_request_response_provider = polling_machine._request_response_provider
+
+        polling_machine._request_response_provider = mock_request_response_provider
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -126,7 +134,7 @@ class TestRegisterResponse:
         # Complete string pre-fixed by a b is the one that works for all versions of python
         # or a encode on a string works for all versions of python
         # For only python 3 , bytes(JsonString, "utf-8") can be done
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_topic, fake_payload_result.encode("utf-8")
         )
 
@@ -141,11 +149,12 @@ class TestRegisterResponse:
         )
 
     def test_receive_register_response_assigned_completes_registration(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
+
+        polling_machine._request_response_provider = mock_request_response_provider
         mocker.patch.object(polling_machine, "on_registration_complete")
-        mock_request_response_provider = polling_machine._request_response_provider
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -187,7 +196,7 @@ class TestRegisterResponse:
             + "}"
         )
 
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_topic, fake_payload_result.encode("utf-8")
         )
 
@@ -204,11 +213,12 @@ class TestRegisterResponse:
         registration_result.registration_state.sub_status == fake_sub_status
 
     def test_receive_register_response_failure_calls_callback_of_register_error(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(polling_machine, "on_registration_complete")
-        mock_request_response_provider = polling_machine._request_response_provider
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -227,9 +237,10 @@ class TestRegisterResponse:
         fake_topic = fake_failure_response_topic + "$rid={}".format(fake_request_id)
 
         fake_payload_result = "HelloHogwarts"
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_topic, fake_payload_result.encode("utf-8")
         )
+
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][1], ValueError)
         assert mock_callback.call_args[0][1].args[0] == "Incoming message failure"
@@ -237,11 +248,12 @@ class TestRegisterResponse:
     def test_receive_register_response_some_unknown_status_calls_callback_of_register_error(
         self, mocker
     ):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(polling_machine, "on_registration_complete")
-        mock_request_response_provider = polling_machine._request_response_provider
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -263,19 +275,20 @@ class TestRegisterResponse:
             '{"operationId":"' + fake_operation_id + '","status":"' + fake_unknown_status + '"}'
         )
 
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_topic, fake_payload_result.encode("utf-8")
         )
+
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][1], ValueError)
         assert mock_callback.call_args[0][1].args[0] == "Other types of failure have occurred."
         assert mock_callback.call_args[0][1].args[1] == fake_payload_result
 
     def test_receive_register_response_greater_than_429_does_register_again(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
-        mock_request_response_provider = polling_machine._request_response_provider
+        polling_machine._request_response_provider = mock_request_response_provider
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -300,10 +313,18 @@ class TestRegisterResponse:
         )
 
         fake_payload_result = "HelloHogwarts"
-        state_based_mqtt.on_state_based_provider_message_received(
+
+        mock_init_polling_timer = mocker.patch(
+            "azure.iot.device.provisioning.internal.polling_machine.Timer"
+        )
+
+        mock_request_response_provider.receive_response(
             fake_topic, fake_payload_result.encode("utf-8")
         )
-        time.sleep(constant.DEFAULT_POLLING_INTERVAL + 3)
+
+        # call polling timer's time up call to simulate polling
+        time_up_call = mock_init_polling_timer.call_args[0][1]
+        time_up_call()
 
         assert mock_request_response_provider.publish.call_count == 2
         mock_request_response_provider.publish.assert_any_call(
@@ -313,11 +334,11 @@ class TestRegisterResponse:
     def test_receive_register_response_after_query_time_passes_calls_callback_with_error(
         self, mocker
     ):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
-        # mocker.patch.object(polling_machine, "on_registration_complete")
-        mock_request_response_provider = polling_machine._request_response_provider
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -348,10 +369,11 @@ class TestQueryResponse:
     constant.DEFAULT_POLLING_INTERVAL = 0.2
 
     def test_receive_query_response_assigning_does_query_again_with_same_operation_id(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
-        mock_request_response_provider = polling_machine._request_response_provider
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -381,7 +403,7 @@ class TestQueryResponse:
         )
 
         # Response for register to transition to waiting polling
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_register_topic, fake_register_payload_result.encode("utf-8")
         )
 
@@ -401,7 +423,7 @@ class TestQueryResponse:
 
         mock_init_polling_timer.reset_mock()
 
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_query_topic_1, fake_query_payload_result.encode("utf-8")
         )
 
@@ -418,11 +440,12 @@ class TestQueryResponse:
         )
 
     def test_receive_query_response_assigned_completes_registration(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(polling_machine, "on_registration_complete")
-        mock_request_response_provider = polling_machine._request_response_provider
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -453,7 +476,7 @@ class TestQueryResponse:
         )
 
         # Response for register to transition to waiting and polling
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_register_topic, fake_register_payload_result.encode("utf-8")
         )
 
@@ -486,7 +509,7 @@ class TestQueryResponse:
         )
 
         # Response for query
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_query_topic_1, fake_query_payload_result.encode("utf-8")
         )
 
@@ -496,11 +519,12 @@ class TestQueryResponse:
         assert isinstance(mock_callback.call_args[0][0], RegistrationResult)
 
     def test_receive_query_response_failure_calls_callback_of_register_error(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(polling_machine, "on_registration_complete")
-        mock_request_response_provider = polling_machine._request_response_provider
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -531,7 +555,7 @@ class TestQueryResponse:
         )
 
         # Response for register to transition to waiting and polling
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_register_topic, fake_register_payload_result.encode("utf-8")
         )
 
@@ -543,7 +567,7 @@ class TestQueryResponse:
         fake_query_payload_result = "HelloHogwarts"
 
         # Response for query
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_query_topic_1, fake_query_payload_result.encode("utf-8")
         )
         assert mock_callback.call_count == 1
@@ -553,10 +577,11 @@ class TestQueryResponse:
     def test_receive_query_response_greater_than_429_does_query_again_with_same_operation_id(
         self, mocker
     ):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
-        mock_request_response_provider = polling_machine._request_response_provider
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
 
@@ -586,7 +611,7 @@ class TestQueryResponse:
         )
 
         # Response for register to transition to waiting polling
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_register_topic, fake_register_payload_result.encode("utf-8")
         )
 
@@ -607,7 +632,7 @@ class TestQueryResponse:
         mock_init_polling_timer.reset_mock()
 
         # Response for query
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_query_topic_1, fake_query_payload_result.encode("utf-8")
         )
 
@@ -629,23 +654,24 @@ class TestCancel:
     constant.DEFAULT_TIMEOUT_INTERVAL = 3
     constant.DEFAULT_POLLING_INTERVAL = 0.2
 
-    def test_cancel_calls_disconnect_on_request_response_provider(self, polling_machine):
-        mock_request_response_provider = polling_machine._request_response_provider
-        polling_machine.register(callback=MagicMock())
+    def test_cancel_calls_disconnect_on_request_response_provider(self, mock_polling_machine):
+        mock_request_response_provider = mock_polling_machine._request_response_provider
+        mock_polling_machine.register(callback=MagicMock())
 
         mock_cancel_callback = MagicMock()
-        polling_machine.cancel(mock_cancel_callback)
+        mock_polling_machine.cancel(mock_cancel_callback)
 
         mock_request_response_provider.disconnect.assert_called_once_with(
-            callback=polling_machine._on_disconnect_completed
+            callback=mock_polling_machine._on_disconnect_completed
         )
         assert mock_cancel_callback.call_count == 1
 
     def test_register_and_cancel_clears_timers_and_disconnects(self, mocker):
-        # Real state based mqtt as we are going to call its "message received" handler.
-        state_based_mqtt = StateBasedMQTTProvider(MagicMock(), MagicMock())
+        state_based_mqtt = MagicMock()
+        mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
         polling_machine = PollingMachine(state_based_mqtt)
-        mock_request_response_provider = polling_machine._request_response_provider
+        polling_machine._request_response_provider = mock_request_response_provider
+
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
         mocker.patch.object(mock_request_response_provider, "disconnect")
@@ -673,7 +699,7 @@ class TestCancel:
             '{"operationId":"' + fake_operation_id + '","status":"' + fake_assigning_status + '"}'
         )
 
-        state_based_mqtt.on_state_based_provider_message_received(
+        mock_request_response_provider.receive_response(
             fake_topic, fake_payload_result.encode("utf-8")
         )
 
@@ -685,8 +711,6 @@ class TestCancel:
         mock_cancel_callback = MagicMock()
         polling_machine.cancel(mock_cancel_callback)
 
-        print("Call count")
-        print(poling_timer_cancel.call_count)
         assert poling_timer_cancel.call_count == 1
         assert query_timer_cancel.call_count == 1
 
