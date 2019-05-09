@@ -8,11 +8,13 @@ import pytest
 import logging
 import six.moves.urllib as urllib
 from azure.iot.device.iothub import Message
-from azure.iot.device.common.transport.mqtt.mqtt_transport import MQTTTransport
-from azure.iot.device.common.transport import constant
+from azure.iot.device.iothub.transport.mqtt.mqtt_transport import MQTTTransport
+from azure.iot.device.iothub.transport import constant
 from azure.iot.device.iothub.auth.authentication_provider_factory import from_connection_string
-from mock import MagicMock, patch
+from mock import MagicMock, patch, ANY
 from datetime import date
+
+logging.basicConfig(level=logging.INFO)
 
 connection_string_format = "HostName={};DeviceId={};SharedAccessKey={}"
 connection_string_format_mod = "HostName={};DeviceId={};ModuleId={};SharedAccessKey={}"
@@ -45,7 +47,6 @@ encoded_fake_topic = (
 subscribe_input_message_topic = (
     "devices/" + fake_device_id + "/modules/" + fake_module_id + "/inputs/#"
 )
-subscribe_input_message_qos = 1
 
 subscribe_c2d_topic = "devices/" + fake_device_id + "/messages/devicebound/#"
 subscribe_c2d_qos = 1
@@ -81,7 +82,9 @@ def authentication_provider():
 
 @pytest.fixture(scope="function")
 def device_transport(authentication_provider):
-    with patch("azure.iot.device.common.transport.mqtt.mqtt_transport.MQTTProvider"):
+    with patch(
+        "azure.iot.device.iothub.transport.mqtt.mqtt_transport.pipeline_stages_mqtt.MQTTProvider"
+    ):
         transport = MQTTTransport(authentication_provider)
     transport.on_transport_connected = MagicMock()
     transport.on_transport_disconnected = MagicMock()
@@ -96,7 +99,9 @@ def module_transport():
     )
     authentication_provider = from_connection_string(connection_string_mod)
 
-    with patch("azure.iot.device.common.transport.mqtt.mqtt_transport.MQTTProvider"):
+    with patch(
+        "azure.iot.device.iothub.transport.mqtt.mqtt_transport.pipeline_stages_mqtt.MQTTProvider"
+    ):
         transport = MQTTTransport(authentication_provider)
     transport.on_transport_connected = MagicMock()
     transport.on_transport_disconnected = MagicMock()
@@ -108,12 +113,12 @@ class TestInstantiation(object):
     def test_instantiates_correctly(self, authentication_provider):
         trans = MQTTTransport(authentication_provider)
         assert trans._auth_provider == authentication_provider
-        assert trans._mqtt_provider is not None
+        assert trans._pipeline is not None
 
 
 class TestConnect:
     def test_connect_calls_connect_on_provider(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
         device_transport.connect()
         mock_mqtt_provider.connect.assert_called_once_with(
             device_transport._auth_provider.get_current_sas_token()
@@ -123,7 +128,7 @@ class TestConnect:
     def test_connected_state_handler_called_wth_new_state_once_provider_gets_connected(
         self, device_transport
     ):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -131,7 +136,7 @@ class TestConnect:
         device_transport.on_transport_connected.assert_called_once_with("connected")
 
     def test_connect_ignored_if_waiting_for_connect_complete(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         device_transport.connect()
@@ -143,7 +148,7 @@ class TestConnect:
         device_transport.on_transport_connected.assert_called_once_with("connected")
 
     def test_connect_ignored_if_waiting_for_send_complete(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -167,7 +172,7 @@ class TestSendEvent:
     def test_send_message_with_no_properties(self, device_transport):
         fake_msg = Message("Petrificus Totalus")
 
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -177,7 +182,7 @@ class TestSendEvent:
             device_transport._auth_provider.get_current_sas_token()
         )
         mock_mqtt_provider.publish.assert_called_once_with(
-            topic=fake_topic, payload=fake_msg.data, qos=send_msg_qos, callback=None
+            topic=fake_topic, payload=fake_msg.data, callback=ANY
         )
 
     def test_send_message_with_output_name(self, module_transport):
@@ -201,7 +206,7 @@ class TestSendEvent:
             + custom_property_value
         )
 
-        mock_mqtt_provider = module_transport._mqtt_provider
+        mock_mqtt_provider = module_transport._pipeline.provider
 
         module_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -211,13 +216,13 @@ class TestSendEvent:
             module_transport._auth_provider.get_current_sas_token()
         )
         mock_mqtt_provider.publish.assert_called_once_with(
-            topic=fake_output_topic, payload=fake_msg.data, qos=send_msg_qos, callback=None
+            topic=fake_output_topic, payload=fake_msg.data, callback=ANY
         )
 
     def test_sendevent_calls_publish_on_provider(self, device_transport):
         fake_msg = create_fake_message()
 
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -227,12 +232,12 @@ class TestSendEvent:
             device_transport._auth_provider.get_current_sas_token()
         )
         mock_mqtt_provider.publish.assert_called_once_with(
-            topic=encoded_fake_topic, payload=fake_msg.data, qos=send_msg_qos, callback=None
+            topic=encoded_fake_topic, payload=fake_msg.data, callback=ANY
         )
 
     def test_send_event_queues_and_connects_before_sending(self, device_transport):
         fake_msg = create_fake_message()
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         # send an event
         device_transport.send_event(fake_msg)
@@ -252,13 +257,13 @@ class TestSendEvent:
         # verify that our connected callback was called and verify that we published the event
         device_transport.on_transport_connected.assert_called_once_with("connected")
         mock_mqtt_provider.publish.assert_called_once_with(
-            topic=encoded_fake_topic, payload=fake_msg.data, qos=send_msg_qos, callback=None
+            topic=encoded_fake_topic, payload=fake_msg.data, callback=ANY
         )
 
     def test_send_event_queues_if_waiting_for_connect_complete(self, device_transport):
         fake_msg = create_fake_message()
 
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         # start connecting and verify that we've called into the provider
         device_transport.connect()
@@ -279,14 +284,14 @@ class TestSendEvent:
         # verify that our connected callback was called and verify that we published the event
         device_transport.on_transport_connected.assert_called_once_with("connected")
         mock_mqtt_provider.publish.assert_called_once_with(
-            topic=encoded_fake_topic, payload=fake_msg.data, qos=send_msg_qos, callback=None
+            topic=encoded_fake_topic, payload=fake_msg.data, callback=ANY
         )
 
     def test_send_event_sends_overlapped_events(self, device_transport):
         fake_msg_1 = create_fake_message()
         fake_msg_2 = Message(fake_event_2)
 
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         # connect
         device_transport.connect()
@@ -296,7 +301,7 @@ class TestSendEvent:
         callback_1 = MagicMock()
         device_transport.send_event(fake_msg_1, callback_1)
         mock_mqtt_provider.publish.assert_called_once_with(
-            topic=encoded_fake_topic, payload=fake_msg_1.data, qos=send_msg_qos, callback=callback_1
+            topic=encoded_fake_topic, payload=fake_msg_1.data, callback=ANY
         )
 
         # while we're waiting for that send to complete, send another event
@@ -312,7 +317,7 @@ class TestSendEvent:
     def test_connect_send_disconnect(self, device_transport):
         fake_msg = create_fake_message()
 
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         # connect
         device_transport.connect()
@@ -329,7 +334,7 @@ class TestSendEvent:
 
 class TestDisconnect:
     def test_disconnect_calls_disconnect_on_provider(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -338,14 +343,14 @@ class TestDisconnect:
         mock_mqtt_provider.disconnect.assert_called_once_with()
 
     def test_disconnect_ignored_if_already_disconnected(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.disconnect(None)
 
         mock_mqtt_provider.disconnect.assert_not_called()
 
     def test_disconnect_calls_client_disconnect_callback(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -358,18 +363,18 @@ class TestDisconnect:
 
 class TestEnableInputMessage:
     def test_subscribe_calls_subscribe_on_provider(self, module_transport):
-        mock_mqtt_provider = module_transport._mqtt_provider
+        mock_mqtt_provider = module_transport._pipeline.provider
 
         module_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
         module_transport.enable_feature(constant.INPUT_MSG)
 
         mock_mqtt_provider.subscribe.assert_called_once_with(
-            topic=subscribe_input_message_topic, qos=subscribe_input_message_qos, callback=None
+            topic=subscribe_input_message_topic, callback=ANY
         )
 
     def test_sets_input_message_status_to_enabled(self, module_transport):
-        mock_mqtt_provider = module_transport._mqtt_provider
+        mock_mqtt_provider = module_transport._pipeline.provider
 
         module_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -380,18 +385,18 @@ class TestEnableInputMessage:
 
 class TestDisableInputMessage:
     def test_unsubscribe_of_input_calls_unsubscribe_on_provider(self, module_transport):
-        mock_mqtt_provider = module_transport._mqtt_provider
+        mock_mqtt_provider = module_transport._pipeline.provider
 
         module_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
         module_transport.disable_feature(constant.INPUT_MSG)
 
         mock_mqtt_provider.unsubscribe.assert_called_once_with(
-            topic=subscribe_input_message_topic, callback=None
+            topic=subscribe_input_message_topic, callback=ANY
         )
 
     def test_sets_input_message_status_to_disabled(self, module_transport):
-        mock_mqtt_provider = module_transport._mqtt_provider
+        mock_mqtt_provider = module_transport._pipeline.provider
 
         module_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -402,18 +407,18 @@ class TestDisableInputMessage:
 
 class TestEnableC2D:
     def test_subscribe_calls_subscribe_on_provider(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
         device_transport.enable_feature(constant.C2D_MSG)
 
         mock_mqtt_provider.subscribe.assert_called_once_with(
-            topic=subscribe_c2d_topic, qos=subscribe_c2d_qos, callback=None
+            topic=subscribe_c2d_topic, callback=ANY
         )
 
     def test_sets_c2d_message_status_to_enabled(self, device_transport):
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
@@ -425,19 +430,19 @@ class TestEnableC2D:
 class TestDisableC2D:
     def test_unsubscribe_calls_unsubscribe_on_provider(self, device_transport):
         device_transport._c2d_topic = subscribe_c2d_topic
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
         device_transport.disable_feature(constant.C2D_MSG)
 
         mock_mqtt_provider.unsubscribe.assert_called_once_with(
-            topic=subscribe_c2d_topic, callback=None
+            topic=subscribe_c2d_topic, callback=ANY
         )
 
     def test_sets_c2d_message_status_to_disabled(self, device_transport):
         device_transport._c2d_topic = subscribe_c2d_topic
-        mock_mqtt_provider = device_transport._mqtt_provider
+        mock_mqtt_provider = device_transport._pipeline.provider
 
         device_transport.connect()
         mock_mqtt_provider.on_mqtt_connected()
