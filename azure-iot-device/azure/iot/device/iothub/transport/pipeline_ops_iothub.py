@@ -117,6 +117,6 @@ class SendMethodResponse(PipelineOperation):
       has completed or failed.
     :type callback: Function/callable
     """
-        super(PipelineOperation, self).__init__(callback=callback)
+        super(SendMethodResponse, self).__init__(callback=callback)
         self.method_response = method_response
         self.needs_connection = True

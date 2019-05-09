@@ -73,7 +73,7 @@ class IotHubMQTTConverter(PipelineStage):
                 new_op=pipeline_ops_mqtt.Publish(topic=topic, payload=op.message.data),
             )
 
-        elif isinstance(op, pipeline_ops_iothub.MethodResponse):
+        elif isinstance(op, pipeline_ops_iothub.SendMethodResponse):
             # Sending a Method Response gets translated into an MQTT Publish operation
             topic = mqtt_topic.get_method_topic_for_publish(
                 op.method_response.request_id, str(op.method_response.status)
@@ -110,6 +110,7 @@ class IotHubMQTTConverter(PipelineStage):
         self.feature_to_topic = {
             constant.C2D_MSG: (mqtt_topic.get_c2d_topic_for_subscribe(device_id, module_id)),
             constant.INPUT_MSG: (mqtt_topic.get_input_topic_for_subscribe(device_id, module_id)),
+            constant.METHODS: (mqtt_topic.get_method_topic_for_subscribe()),
         }
 
     def _handle_pipeline_event(self, event):

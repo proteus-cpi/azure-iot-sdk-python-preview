@@ -46,7 +46,7 @@ def get_input_topic_for_subscribe(device_id, module_id):
     return _get_topic_base(device_id, module_id) + "/inputs/#"
 
 
-def get_method_topic_for_publish(self, request_id, status):
+def get_method_topic_for_publish(request_id, status):
     """
     :return: The topic for publishing method responses. It is of the format
     "$iothub/methods/res/<status>/?$rid=<requestId>
@@ -56,7 +56,7 @@ def get_method_topic_for_publish(self, request_id, status):
     )
 
 
-def get_method_topic_for_subscribe(self):
+def get_method_topic_for_subscribe():
     """
     :return: The topic for ALL incoming methods. It is of the format
     "$iothub/methods/POST/#"
@@ -121,10 +121,27 @@ def get_method_name_from_topic(topic):
     :param str topic: The topic string
     """
     parts = topic.split("/")
-    if len(parts) >= 4 and parts[2] == "methods":
+    if is_method_topic(topic) and len(parts) >= 4:
         return parts[3]
     else:
         raise ValueError("topic has incorrect format")
+
+
+# TODO: leverage this helper in all property extraction functions
+def _extract_properties(properties_str):
+    """Return a dictionary of properties from a string in the format
+    ${key1}={value1}&${key2}={value2}&...{keyn}={valuen}
+    """
+    d = {}
+    kv_pairs = properties_str.split("&")
+
+    for entry in kv_pairs:
+        pair = entry.split("=")
+        key = urllib.parse.unquote_plus(pair[0]).lstrip("$")
+        value = urllib.parse.unquote_plus(pair[1])
+        d[key] = value
+
+    return d
 
 
 def get_method_request_id_from_topic(topic):
@@ -134,11 +151,14 @@ def get_method_request_id_from_topic(topic):
     "$iothub/methods/POST/{method name}/?$rid={request id}"
 
     :param str stopic: the topic string
+    :raises: ValueError if topic has incorrect format
+    :returns: request id from topic string
     """
     parts = topic.split("/")
-    if len(parts) >= 4 and parts[2] == "methods":
-        # TODO: do this in a smarter way, this is dangerous
-        return parts[4].split("=")[1]
+    if is_method_topic(topic) and len(parts) >= 4:
+
+        properties = _extract_properties(topic.split("?")[1])
+        return properties["rid"]
     else:
         raise ValueError("topic has incorrect format")
 
