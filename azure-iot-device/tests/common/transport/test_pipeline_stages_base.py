@@ -464,7 +464,7 @@ class TestPipelineStageHandlePrivatePipelineEvent(object):
         stage.previous = None
         stage.unhandled_error_handler.assert_not_called()
         stage._handle_pipeline_event(event)
-        stage.unhandled_error_handler.assert_called_once()
+        assert stage.unhandled_error_handler.call_count == 1
 
 
 @pytest.mark.describe("PipelineStage continue_op function")
