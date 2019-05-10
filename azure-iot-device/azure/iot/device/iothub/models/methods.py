@@ -44,7 +44,8 @@ class MethodResponse(object):
 
     :ivar str request_id: The request id of the MethodRequest being responded to.
     :ivar int status: The status of the execution of the MethodRequest.
-    :ivar dict payload: The JSON payload to be sent with the response.
+    :ivar payload: The JSON payload to be sent with the response.
+    :type payload: dict, str, int, float, bool, or None (JSON compatible values)
     """
 
     def __init__(self, request_id, status, payload=None):
@@ -52,7 +53,8 @@ class MethodResponse(object):
 
         :param str request_id: The request id of the MethodRequest being responded to.
         :param int status: The status of the execution of the MethodRequest.
-        :param dict payload: The JSON payload to be sent with the response. (OPTIONAL)
+        :param payload: The JSON payload to be sent with the response. (OPTIONAL)
+        :type payload: dict, str, int, float, bool, or None (JSON compatible values)
         """
         self.request_id = request_id
         self.status = status
@@ -65,6 +67,6 @@ class MethodResponse(object):
         :param method_request: The MethodRequest object to respond to.
         :type method_request: MethodRequest.
         :param int status: The status of the execution of the MethodRequest.
-        :param dict payload: The JSON payload to be sent with the response. (OPTIONAL)
+        :type payload: dict, str, int, float, bool, or None (JSON compatible values)
         """
         return cls(request_id=method_request.request_id, status=status, payload=payload)

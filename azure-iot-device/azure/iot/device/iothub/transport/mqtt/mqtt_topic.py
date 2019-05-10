@@ -52,7 +52,7 @@ def get_method_topic_for_publish(request_id, status):
     "$iothub/methods/res/<status>/?$rid=<requestId>
     """
     return "$iothub/methods/res/{status}/?$rid={rid}".format(
-        status=urllib.parse.quote(status), rid=urllib.parse.quote(request_id)
+        status=urllib.parse.quote_plus(status), rid=urllib.parse.quote_plus(request_id)
     )
 
 

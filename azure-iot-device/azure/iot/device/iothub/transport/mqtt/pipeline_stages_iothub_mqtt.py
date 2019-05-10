@@ -79,7 +79,6 @@ class IotHubMQTTConverter(PipelineStage):
                 op.method_response.request_id, str(op.method_response.status)
             )
             payload = json.dumps(op.method_response.payload)
-            # TODO: Why is there no callback on the continue?
             self.continue_with_different_op(
                 original_op=op, new_op=pipeline_ops_mqtt.Publish(topic=topic, payload=payload)
             )
