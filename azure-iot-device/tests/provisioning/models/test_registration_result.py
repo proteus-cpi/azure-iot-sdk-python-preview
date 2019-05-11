@@ -22,6 +22,7 @@ fake_last_update_dttm = datetime.datetime(2020, 10, 17)
 fake_etag = "HighQualityFlyingBroom"
 
 
+@pytest.mark.it("result instantiated correctly")
 def test_registration_result_instantiated_correctly():
     fake_registration_state = RegistrationState(
         fake_device_id,
@@ -48,6 +49,7 @@ def test_registration_result_instantiated_correctly():
     assert registration_result.registration_state.etag == fake_etag
 
 
+@pytest.mark.it("properties of result do not have setter")
 def test_some_properties_of_result_are_not_settable():
     registration_result = RegistrationResult("RequestId123", "Operation456", "emitted", None)
     with pytest.raises(AttributeError, match="can't set attribute"):
@@ -57,6 +59,7 @@ def test_some_properties_of_result_are_not_settable():
         registration_result.registration_state = "FakeRegistrationState"
 
 
+@pytest.mark.it("properties of state do not have setter")
 def test_some_properties_of_state_are_not_settable():
     registration_state = RegistrationState(
         fake_device_id,

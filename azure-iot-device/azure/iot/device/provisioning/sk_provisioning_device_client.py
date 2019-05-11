@@ -30,17 +30,20 @@ class SymmetricKeyProvisioningDeviceClient(ProvisioningDeviceClient):
         self._polling_machine = PollingMachine(mqtt_state_based_provider)
         # To be defined by sample
         self.on_registration_complete = None
-        self._polling_machine.on_disconnected = self._on_connection_state_change
         self._polling_machine.on_registration_complete = self._on_device_registration_complete
 
     def register(self):
         """
         Register the device with the provisioning service.
+        This is a synchronous call, meaning that this function will not return until the registration
+        process has completed successfully or the attempt has resulted in a failure. Before returning
+        the client will also disconnect from the Hub.
+        If a registration attempt is made while a previous registration is in progress it may throw an error.
         """
         logger.info("Registering with Hub...")
         register_complete = Event()
 
-        def callback_register(result=None, error=None):
+        def on_register_complete(result=None, error=None):
             # This could be a failed/successful registration result from the HUB
             # or a error from polling machine. Response should be given appropriately
             if result is not None:
@@ -53,35 +56,36 @@ class SymmetricKeyProvisioningDeviceClient(ProvisioningDeviceClient):
 
             register_complete.set()
 
-        self._polling_machine.register(callback=callback_register)
+        self._polling_machine.register(callback=on_register_complete)
 
         register_complete.wait()
 
     def cancel(self):
         """
-        Cancels the current registration process.
+        This is a synchronous call, meaning that this function will not return until the cancellation
+        process has completed successfully or the attempt has resulted in a failure. Before returning
+        the client will also disconnect from the Hub.
+
+        In case there is no registration in process it will throw an error as there is
+        no registration process to cancel.
         """
         logger.info("Cancelling the current registration process")
         cancel_complete = Event()
 
-        def callback_cancel():
+        def on_cancel_complete():
             cancel_complete.set()
             logger.info("Successfully cancelled the current registration process")
 
-        self._polling_machine.cancel(callback=callback_cancel)
+        self._polling_machine.cancel(callback=on_cancel_complete)
         cancel_complete.wait()
 
     def _on_device_registration_complete(self, registration_result):
         """Handler to be called by the transport when registration changes status."""
-        logger.info("_on_device_registration_update")
+        logger.info("_on_device_registration_complete")
 
         if self.on_registration_complete:
             try:
                 self.on_registration_complete(registration_result)
             except:  # noqa: E722 do not use bare 'except'
-                logger.error("Unexpected error calling on_registration_complete")
+                logger.error("Unexpected error calling on_device_registration_complete")
                 logger.error(traceback.format_exc())
-
-    def _on_connection_state_change(self, new_state):
-        """Handler to be called by the transport upon a connection state change."""
-        logger.info("Connection State - {}".format(new_state))

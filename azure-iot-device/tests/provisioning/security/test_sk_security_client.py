@@ -17,6 +17,7 @@ signature = "IsolemnlySwearThatIamuUptoNogood"
 expiry = "1539043658"
 
 
+@pytest.mark.it("properties have getters")
 def test_properties_are_gettable_after_create_security_client():
     security_client = SymmetricKeySecurityClient(
         fake_registration_id, fake_symmetric_key, fake_id_scope
@@ -25,6 +26,7 @@ def test_properties_are_gettable_after_create_security_client():
     assert security_client.registration_id == fake_registration_id
 
 
+@pytest.mark.it("properties do not have setter")
 def test_properties_are_not_settable():
     security_client = SymmetricKeySecurityClient(
         fake_registration_id, fake_symmetric_key, fake_id_scope
@@ -34,6 +36,7 @@ def test_properties_are_not_settable():
         security_client.id_scope = "WhompingWillow"
 
 
+@pytest.mark.it("create sas token")
 def test_create_sas():
     security_client = SymmetricKeySecurityClient(
         fake_registration_id, fake_symmetric_key, fake_id_scope

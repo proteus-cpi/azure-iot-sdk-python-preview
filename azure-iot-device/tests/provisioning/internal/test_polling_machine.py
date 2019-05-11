@@ -54,7 +54,9 @@ def mock_polling_machine(mocker, mock_request_response_provider):
     return mock_polling_machine
 
 
+@pytest.mark.describe("PollingMachine - Register")
 class TestRegister:
+    @pytest.mark.it("register in polling machine calls subscribe on request response provider")
     def test_register_calls_subscribe_on_request_response_provider(self, mock_polling_machine):
         mock_request_response_provider = mock_polling_machine._request_response_provider
         mock_polling_machine.register()
@@ -64,6 +66,7 @@ class TestRegister:
             callback=mock_polling_machine._on_subscribe_completed,
         )
 
+    @pytest.mark.it("subscription being complete calls send request on request response provider")
     def test_on_subscribe_completed_calls_send_register_request_on_request_response_provider(
         self, mock_polling_machine, mocker
     ):
@@ -90,11 +93,13 @@ class TestRegister:
         )
 
 
+@pytest.mark.describe("PollingMachine - Response from Register")
 class TestRegisterResponse:
     # Change the timeout so that the test does not hang for more time
-    constant.DEFAULT_TIMEOUT_INTERVAL = 3 * 100
-    constant.DEFAULT_POLLING_INTERVAL = 0.2 * 100
+    constant.DEFAULT_TIMEOUT_INTERVAL = 3
+    constant.DEFAULT_POLLING_INTERVAL = 0.2
 
+    @pytest.mark.it("response from register with a status of assigning starts querying")
     def test_receive_register_response_assigning_does_query_with_operation_id(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -148,6 +153,9 @@ class TestRegisterResponse:
             request=" ",
         )
 
+    @pytest.mark.it(
+        "response from register with a status of assigned completes registration process"
+    )
     def test_receive_register_response_assigned_completes_registration(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -157,6 +165,7 @@ class TestRegisterResponse:
         mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
+        mocker.patch.object(mock_request_response_provider, "disconnect")
 
         # to transition into initializing
         mock_callback = MagicMock()
@@ -200,6 +209,8 @@ class TestRegisterResponse:
             fake_topic, fake_payload_result.encode("utf-8")
         )
 
+        polling_machine._on_disconnect_completed_register()
+
         assert mock_request_response_provider.publish.call_count == 1
         assert polling_machine.on_registration_complete.call_count == 1
         assert mock_callback.call_count == 1
@@ -212,6 +223,9 @@ class TestRegisterResponse:
         registration_result.registration_state.device_id == fake_device_id
         registration_result.registration_state.sub_status == fake_sub_status
 
+    @pytest.mark.it(
+        "response from register that failed calls callback of registration process with error"
+    )
     def test_receive_register_response_failure_calls_callback_of_register_error(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -221,6 +235,7 @@ class TestRegisterResponse:
         mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
+        mocker.patch.object(mock_request_response_provider, "disconnect")
 
         # to transition into initializing
         mock_callback = MagicMock()
@@ -241,10 +256,15 @@ class TestRegisterResponse:
             fake_topic, fake_payload_result.encode("utf-8")
         )
 
+        polling_machine._on_disconnect_completed_error()
+
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][1], ValueError)
         assert mock_callback.call_args[0][1].args[0] == "Incoming message failure"
 
+    @pytest.mark.it(
+        "response from register with some unknown status calls callback of registration process with error"
+    )
     def test_receive_register_response_some_unknown_status_calls_callback_of_register_error(
         self, mocker
     ):
@@ -256,6 +276,7 @@ class TestRegisterResponse:
         mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
+        mocker.patch.object(mock_request_response_provider, "disconnect")
 
         # to transition into initializing
         mock_callback = MagicMock()
@@ -279,11 +300,14 @@ class TestRegisterResponse:
             fake_topic, fake_payload_result.encode("utf-8")
         )
 
+        polling_machine._on_disconnect_completed_error()
+
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][1], ValueError)
         assert mock_callback.call_args[0][1].args[0] == "Other types of failure have occurred."
         assert mock_callback.call_args[0][1].args[1] == fake_payload_result
 
+    @pytest.mark.it("response from register with status code > 429 calls register again")
     def test_receive_register_response_greater_than_429_does_register_again(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -331,6 +355,7 @@ class TestRegisterResponse:
             topic=constant.PUBLISH_TOPIC_REGISTRATION.format(fake_request_id_2), request=" "
         )
 
+    @pytest.mark.it("timeout leads to callback of registration process with error")
     def test_receive_register_response_after_query_time_passes_calls_callback_with_error(
         self, mocker
     ):
@@ -341,6 +366,7 @@ class TestRegisterResponse:
 
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
+        mocker.patch.object(mock_request_response_provider, "disconnect")
 
         # to transition into initializing
         mock_callback = MagicMock()
@@ -357,17 +383,21 @@ class TestRegisterResponse:
         # sleep so that it times out query
         time.sleep(constant.DEFAULT_TIMEOUT_INTERVAL + 1)
 
+        polling_machine._on_disconnect_completed_error()
+
         assert mock_request_response_provider.publish.call_count == 1
         assert mock_callback.call_count == 1
         print(mock_callback.call_args)
         assert mock_callback.call_args[0][1].args[0] == "Time is up for query timer"
 
 
+@pytest.mark.describe("PollingMachine - Response from Query")
 class TestQueryResponse:
     # Change the timeout so that the test does not hang for more time
     constant.DEFAULT_TIMEOUT_INTERVAL = 3
     constant.DEFAULT_POLLING_INTERVAL = 0.2
 
+    @pytest.mark.it("response from query with a status of assigning does querying again")
     def test_receive_query_response_assigning_does_query_again_with_same_operation_id(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -439,6 +469,7 @@ class TestQueryResponse:
             request=" ",
         )
 
+    @pytest.mark.it("response from register with a status of assigned completes registration")
     def test_receive_query_response_assigned_completes_registration(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -448,6 +479,7 @@ class TestQueryResponse:
         mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
+        mocker.patch.object(mock_request_response_provider, "disconnect")
 
         # to transition into initializing
         mock_callback = MagicMock()
@@ -513,11 +545,16 @@ class TestQueryResponse:
             fake_query_topic_1, fake_query_payload_result.encode("utf-8")
         )
 
+        polling_machine._on_disconnect_completed_register()
+
         assert mock_request_response_provider.publish.call_count == 2
         assert polling_machine.on_registration_complete.call_count == 1
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][0], RegistrationResult)
 
+    @pytest.mark.it(
+        "response from a query that failed calls callback of registration process with error"
+    )
     def test_receive_query_response_failure_calls_callback_of_register_error(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -527,6 +564,7 @@ class TestQueryResponse:
         mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
+        mocker.patch.object(mock_request_response_provider, "disconnect")
 
         # to transition into initializing
         mock_callback = MagicMock()
@@ -570,10 +608,14 @@ class TestQueryResponse:
         mock_request_response_provider.receive_response(
             fake_query_topic_1, fake_query_payload_result.encode("utf-8")
         )
+
+        polling_machine._on_disconnect_completed_error()
+
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][1], ValueError)
         assert mock_callback.call_args[0][1].args[0] == "Incoming message failure"
 
+    @pytest.mark.it("response from query with status code > 429 does query again")
     def test_receive_query_response_greater_than_429_does_query_again_with_same_operation_id(
         self, mocker
     ):
@@ -649,23 +691,36 @@ class TestQueryResponse:
         )
 
 
+@pytest.mark.describe("PollingMachine - Cancel")
 class TestCancel:
     # Change the timeout so that the test does not hang for more time
     constant.DEFAULT_TIMEOUT_INTERVAL = 3
     constant.DEFAULT_POLLING_INTERVAL = 0.2
 
-    def test_cancel_calls_disconnect_on_request_response_provider(self, mock_polling_machine):
+    @pytest.mark.it(
+        "cancel calls disconnect on request response provider and calls cancel callback"
+    )
+    def test_cancel_disconnects_on_request_response_provider_and_calls_callback(
+        self, mocker, mock_polling_machine
+    ):
         mock_request_response_provider = mock_polling_machine._request_response_provider
+
         mock_polling_machine.register(callback=MagicMock())
 
         mock_cancel_callback = MagicMock()
         mock_polling_machine.cancel(mock_cancel_callback)
 
         mock_request_response_provider.disconnect.assert_called_once_with(
-            callback=mock_polling_machine._on_disconnect_completed
+            callback=mock_polling_machine._on_disconnect_completed_cancel
         )
+
+        mock_polling_machine._on_disconnect_completed_cancel()
+
         assert mock_cancel_callback.call_count == 1
 
+    @pytest.mark.it(
+        "cancel calls disconnect on request response provider, clears timers and calls cancel callback"
+    )
     def test_register_and_cancel_clears_timers_and_disconnects(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -715,6 +770,8 @@ class TestCancel:
         assert query_timer_cancel.call_count == 1
 
         mock_request_response_provider.disconnect.assert_called_once_with(
-            callback=polling_machine._on_disconnect_completed
+            callback=polling_machine._on_disconnect_completed_cancel
         )
+        polling_machine._on_disconnect_completed_cancel()
+
         assert mock_cancel_callback.call_count == 1

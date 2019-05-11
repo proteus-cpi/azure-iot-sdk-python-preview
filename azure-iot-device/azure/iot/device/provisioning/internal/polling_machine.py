@@ -26,9 +26,7 @@ class PollingMachine(object):
     """
     Class that is responsible for sending the initial registration request and polling the
     registration process for constant updates.
-    :ivar:on_disconnected: Event handler called upon disconnecting
-    :type on_disconnected: Function
-    ivar:on_registration_status_update: Event handler called upon status update of registration process
+    ivar:on_registration_complete: Event handler called upon status update of registration process
     :type on_registration_complete: Function
     """
 
@@ -42,8 +40,10 @@ class PollingMachine(object):
         self._register_callback = None
         self._cancel_callback = None
 
-        self.on_disconnected = None
         self.on_registration_complete = None
+
+        self._registration_error = None
+        self._registration_result = None
 
         self._operations = {}
 
@@ -119,12 +119,17 @@ class PollingMachine(object):
                 "after": "_call_error",
             },
             {"trigger": "_trig_error", "source": "cancelling", "dest": None},
-            {"trigger": "_trig_cancel", "source": "disconnected", "dest": None},
+            {
+                "trigger": "_trig_cancel",
+                "source": ["disconnected", "completed"],
+                "dest": None,
+                "after": "_inform_no_process",
+            },
             {
                 "trigger": "_trig_cancel",
                 "source": ["initializing", "registering", "waiting_to_poll", "polling"],
                 "dest": "cancelling",
-                "after": "clear_and_disconnect",
+                "after": "_call_cancel",
             },
         ]
 
@@ -234,7 +239,8 @@ class PollingMachine(object):
             del self._operations[rid]
             self._trig_wait(intermediate_registration_result)
         elif int(status_code, 10) >= 300:  # pure failure
-            self._trig_error(ValueError("Incoming message failure"))  # TODO:Force status=error?
+            self._registration_error = ValueError("Incoming message failure")
+            self._trig_error()
         else:  # successful case, transition into complete or poll status
             self._handle_successful_response(rid, retry_after, response)
 
@@ -268,9 +274,11 @@ class PollingMachine(object):
                 intermediate_registration_result.operation_id = operation_id
                 self._trig_wait(intermediate_registration_result)
             else:
-                self._trig_error(ValueError("This request was never sent"))
+                self._registration_error = ValueError("This request was never sent")
+                self._trig_error()
         elif int(status_code, 10) >= 300:  # pure failure
-            self._trig_error(ValueError("Incoming message failure"))
+            self._registration_error = ValueError("Incoming message failure")
+            self._trig_error()
         else:  # successful status code case, transition into complete or another poll status
             self._handle_successful_response(rid, retry_after, response)
 
@@ -289,11 +297,35 @@ class PollingMachine(object):
             complete_registration_result = self._decode_complete_json_response(
                 successful_result, response
             )
-            self._trig_complete(complete_registration_result)
+            self._registration_result = complete_registration_result
+            self._trig_complete()
         else:
-            self._trig_error(ValueError("Other types of failure have occurred.", response))
+            self._registration_error = ValueError("Other types of failure have occurred.", response)
+            self._trig_error()
 
-    def clear_and_disconnect(self, event_data):
+    def _inform_no_process(self, event_data):
+        raise RuntimeError("There is no registration process to cancel.")
+
+    def _call_cancel(self, event_data):
+        """
+        Completes the cancellation process
+        """
+        logger.info("Cancel called from polling machine")
+        self._clear_timers()
+        self._request_response_provider.disconnect(callback=self._on_disconnect_completed_cancel)
+
+    def _call_error(self, event_data):
+        logger.info("Failed register from polling machine")
+
+        self._clear_timers()
+        self._request_response_provider.disconnect(callback=self._on_disconnect_completed_error)
+
+    def _call_complete(self, event_data):
+        logger.info("Complete register from polling machine")
+        self._clear_timers()
+        self._request_response_provider.disconnect(callback=self._on_disconnect_completed_register)
+
+    def _clear_timers(self):
         """
         Clears all the timers and disconnects from the service
         """
@@ -301,54 +333,14 @@ class PollingMachine(object):
             self._query_timer.cancel()
         if self._polling_timer is not None:
             self._polling_timer.cancel()
-        self._request_response_provider.disconnect(callback=self._on_disconnect_completed)
-        callback = self._cancel_callback
-
-        if callback:
-            self._cancel_callback = None
-            callback()
-
-    def _call_error(self, event_data):
-        logger.info("Failed register from polling machine")
-        error = event_data.args[0]
-        callback = self._register_callback
-
-        if callback:
-            self._register_callback = None
-            try:
-                callback(None, error)
-            except:  # noqa: E722 do not use bare 'except'
-                logger.error("Unexpected error calling callback supplied to register")
-                logger.error(traceback.format_exc())
-
-    def _call_complete(self, event_data):
-        logger.info("Complete register from polling machine")
-        registration_result = event_data.args[0]
-
-        if self.on_registration_complete:
-            try:
-                self.on_registration_complete(registration_result)
-            except:  # noqa: E722 do not use bare 'except'
-                logger.error("Unexpected error calling on_registration_complete")
-                logger.error(traceback.format_exc())
-
-        callback = self._register_callback
-
-        if callback:
-            self._register_callback = None
-            try:
-                callback(registration_result, None)
-            except:  # noqa: E722 do not use bare 'except'
-                logger.error("Unexpected error calling callback supplied to register")
-                logger.error(traceback.format_exc())
-        # TODO : Should disconnect be by default called here ?
 
     def _set_query_timer(self):
         def time_up_query():
             logger.error("Time is up for query timer")
             self._query_timer.cancel()
             # TimeoutError no defined in python 2
-            self._trig_error(ValueError("Time is up for query timer"))
+            self._registration_error = ValueError("Time is up for query timer")
+            self._trig_error()
 
         self._query_timer = Timer(constant.DEFAULT_TIMEOUT_INTERVAL, time_up_query)
         self._query_timer.start()
@@ -427,13 +419,42 @@ class PollingMachine(object):
 
         return RegistrationQueryStatusResult(rid, retry_after, operation_id, status)
 
-    def _on_disconnect_completed(self):
+    def _on_disconnect_completed_error(self):
         logger.info("on_disconnect_completed for Device Provisioning Service")
-        if self.on_disconnected:
+        callback = self._register_callback
+        if callback:
+            self._register_callback = None
             try:
-                self.on_disconnected("disconnected")
+                callback(None, self._registration_error)
             except:  # noqa: E722 do not use bare 'except'
-                logger.error("Unexpected error calling on_disconnected")
+                logger.error("Unexpected error calling callback supplied to register")
+                logger.error(traceback.format_exc())
+
+    def _on_disconnect_completed_cancel(self):
+        logger.info("on_disconnect_completed after cancelling current Device Provisioning Service")
+        callback = self._cancel_callback
+
+        if callback:
+            self._cancel_callback = None
+            callback()
+
+    def _on_disconnect_completed_register(self):
+        logger.info("on_disconnect_completed after registration to Device Provisioning Service")
+        callback = self._register_callback
+
+        if self.on_registration_complete:
+            try:
+                self.on_registration_complete(self._registration_result)
+            except:  # noqa: E722 do not use bare 'except'
+                logger.error("Unexpected error calling on_registration_complete")
+                logger.error(traceback.format_exc())
+
+        if callback:
+            self._register_callback = None
+            try:
+                callback(self._registration_result, None)
+            except:  # noqa: E722 do not use bare 'except'
+                logger.error("Unexpected error calling callback supplied to register")
                 logger.error(traceback.format_exc())
 
     def _on_subscribe_completed(self):

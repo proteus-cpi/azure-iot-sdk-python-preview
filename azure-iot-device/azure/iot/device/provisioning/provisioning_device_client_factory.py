@@ -19,7 +19,7 @@ def create_from_security_client(provisioning_host, security_client, transport_ch
     Service based on parameters passed.
     :param provisioning_host: Host running the Device Provisioning Service. Can be found in the Azure portal in the
     Overview tab as the string Global device endpoint
-    :param security_client: Instance of Security client object which can be either of Symmetric Key, TPM or X.509
+    :param security_client: Instance of Security client object which can be either of SymmetricKeySecurityClient,  TPMSecurtiyClient or X509SecurityClient
     :param transport_choice: A string representing the transport the user wants
     :return: A specific registration client based on parameters and validations.
     """

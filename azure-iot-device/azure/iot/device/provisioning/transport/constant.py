@@ -23,7 +23,6 @@ DEFAULT_POLLING_INTERVAL = 2
 """
 api version to use while communicating with service.
 """
-# API_VERSION = "2018-11-01"
 API_VERSION = "2019-03-31"
 """
 Default timeout to use when communicating with the service

@@ -66,6 +66,7 @@ def mock_polling_machine_success(mocker):
     return mocker.MagicMock(wraps=FakePollingMachineSuccess(mocker.MagicMock()))
 
 
+@pytest.mark.it("register calls register on polling machine with passed in callback")
 def test_client_register_success_calls_polling_machine_register_with_callback(
     mocker, state_based_mqtt, mock_polling_machine_success
 ):
@@ -79,6 +80,7 @@ def test_client_register_success_calls_polling_machine_register_with_callback(
     assert mock_polling_machine_success.register.call_count == 1
 
 
+@pytest.mark.it("cancel calls cancel on polling machine with passed in callback")
 def test_client_cancel_calls_polling_machine_cancel_with_callback(
     mocker, state_based_mqtt, mock_polling_machine_success
 ):
@@ -96,12 +98,7 @@ def test_client_cancel_calls_polling_machine_cancel_with_callback(
     )
 
 
-def test_instantiation_sets_on_connected_handler_in_polling_machine():
-    client = SymmetricKeyProvisioningDeviceClient(state_based_mqtt)
-    assert client._polling_machine.on_disconnected is not None
-    assert client._polling_machine.on_disconnected == client._on_connection_state_change
-
-
+@pytest.mark.it("client instantiates with a registration complete handler")
 def test_instantiation_sets_on_registration_complete_handler_in_polling_machine():
     client = SymmetricKeyProvisioningDeviceClient(state_based_mqtt)
     assert client._polling_machine.on_registration_complete is not None

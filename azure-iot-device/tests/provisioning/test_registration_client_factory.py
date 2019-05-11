@@ -30,6 +30,7 @@ def security_client():
     return SymmetricKeySecurityClient("fake_registration_id", "fake_symmetric_key", "fake_id_scope")
 
 
+@pytest.mark.it("creates provisioning client")
 @pytest.mark.parametrize(
     "protocol,expected_transport",
     [
@@ -46,6 +47,7 @@ def test_create_from_security_provider_instantiates_client(
     assert client.on_registration_complete is None
 
 
+@pytest.mark.it("raises error if it is not symmetric security client")
 def test_raises_when_client_created_from_security_provider_with_not_symmetric_security():
     with pytest.raises(
         ValueError, match="A symmetric key security provider must be provided for MQTT"
