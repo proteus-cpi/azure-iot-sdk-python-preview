@@ -113,3 +113,20 @@ def test_instantiation_sets_on_registration_complete_handler_in_polling_machine(
 def test_instantiation_sets_on_registration_complete_attribute():
     client = SymmetricKeyProvisioningDeviceClient(state_based_mqtt)
     assert client.on_registration_complete is None
+
+
+@pytest.mark.it("registration process completion calls on registration complete")
+def test_on_registration_complete_calls_callback_if_defined(mocker):
+    client = SymmetricKeyProvisioningDeviceClient(state_based_mqtt)
+    result = create_success_result()
+
+    mock_registration_complete_function = mocker.MagicMock()
+
+    client.on_registration_complete = mock_registration_complete_function
+    client._on_device_registration_complete(result)
+    mock_registration_complete_function.assert_called_once_with(result)
+    assert mock_registration_complete_function.call_count == 1
+
+
+
+
