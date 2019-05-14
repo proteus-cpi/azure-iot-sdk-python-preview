@@ -5,11 +5,12 @@
 # --------------------------------------------------------------------------
 
 import logging
+import json
 from azure.iot.device.common.transport import pipeline_ops_base
 from azure.iot.device.common.transport.mqtt import pipeline_ops_mqtt
 from azure.iot.device.common.transport.mqtt import pipeline_events_mqtt
 from azure.iot.device.common.transport.pipeline_stages_base import PipelineStage
-from azure.iot.device.iothub.models import Message
+from azure.iot.device.iothub.models import Message, MethodRequest
 from azure.iot.device.iothub.transport import constant
 from azure.iot.device.iothub.transport import pipeline_ops_iothub
 from azure.iot.device.iothub.transport import pipeline_events_iothub
@@ -53,12 +54,7 @@ class IotHubMQTTConverter(PipelineStage):
             self.continue_with_different_op(
                 original_op=op,
                 new_op=pipeline_ops_mqtt.SetConnectionArgs(
-                    client_id=client_id,
-                    hostname=hostname,
-                    username=username,
-                    device_id=op.device_id,
-                    module_id=op.module_id,
-                    ca_cert=op.ca_cert,
+                    client_id=client_id, hostname=hostname, username=username, ca_cert=op.ca_cert
                 ),
             )
 
@@ -70,6 +66,16 @@ class IotHubMQTTConverter(PipelineStage):
             self.continue_with_different_op(
                 original_op=op,
                 new_op=pipeline_ops_mqtt.Publish(topic=topic, payload=op.message.data),
+            )
+
+        elif isinstance(op, pipeline_ops_iothub.SendMethodResponse):
+            # Sending a Method Response gets translated into an MQTT Publish operation
+            topic = mqtt_topic.get_method_topic_for_publish(
+                op.method_response.request_id, str(op.method_response.status)
+            )
+            payload = json.dumps(op.method_response.payload)
+            self.continue_with_different_op(
+                original_op=op, new_op=pipeline_ops_mqtt.Publish(topic=topic, payload=payload)
             )
 
         elif isinstance(op, pipeline_ops_base.EnableFeature):
@@ -98,6 +104,7 @@ class IotHubMQTTConverter(PipelineStage):
         self.feature_to_topic = {
             constant.C2D_MSG: (mqtt_topic.get_c2d_topic_for_subscribe(device_id, module_id)),
             constant.INPUT_MSG: (mqtt_topic.get_input_topic_for_subscribe(device_id, module_id)),
+            constant.METHODS: (mqtt_topic.get_method_topic_for_subscribe()),
         }
 
     def _handle_pipeline_event(self, event):
@@ -107,16 +114,27 @@ class IotHubMQTTConverter(PipelineStage):
         """
         if isinstance(event, pipeline_events_mqtt.IncomingMessage):
             topic = event.topic
-            message = Message(event.payload)
 
             if mqtt_topic.is_c2d_topic(topic):
+                message = Message(event.payload)
                 mqtt_topic.extract_properties_from_topic(topic, message)
-                self.handle_pipeline_event(pipeline_events_iothub.C2DMessage(message))
+                self.handle_pipeline_event(pipeline_events_iothub.C2DMessageEvent(message))
 
             elif mqtt_topic.is_input_topic(topic):
+                message = Message(event.payload)
                 mqtt_topic.extract_properties_from_topic(topic, message)
                 input_name = mqtt_topic.get_input_name_from_topic(topic)
-                self.handle_pipeline_event(pipeline_events_iothub.InputMessage(input_name, message))
+                self.handle_pipeline_event(
+                    pipeline_events_iothub.InputMessageEvent(input_name, message)
+                )
+
+            elif mqtt_topic.is_method_topic(topic):
+                rid = mqtt_topic.get_method_request_id_from_topic(topic)
+                method_name = mqtt_topic.get_method_name_from_topic(topic)
+                method_received = MethodRequest(
+                    request_id=rid, name=method_name, payload=json.loads(event.payload)
+                )
+                self._handle_pipeline_event(pipeline_events_iothub.MethodRequest(method_received))
 
             else:
                 logger.warning("Warning: dropping message with topic {}".format(topic))
