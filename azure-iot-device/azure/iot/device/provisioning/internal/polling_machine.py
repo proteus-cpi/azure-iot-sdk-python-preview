@@ -40,7 +40,7 @@ class PollingMachine(object):
         self._register_callback = None
         self._cancel_callback = None
 
-        self.on_registration_complete = None
+        # self.on_registration_complete = None
 
         self._registration_error = None
         self._registration_result = None
@@ -441,13 +441,6 @@ class PollingMachine(object):
     def _on_disconnect_completed_register(self):
         logger.info("on_disconnect_completed after registration to Device Provisioning Service")
         callback = self._register_callback
-
-        if self.on_registration_complete:
-            try:
-                self.on_registration_complete(self._registration_result)
-            except:  # noqa: E722 do not use bare 'except'
-                logger.error("Unexpected error calling on_registration_complete")
-                logger.error(traceback.format_exc())
 
         if callback:
             self._register_callback = None

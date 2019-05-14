@@ -162,7 +162,6 @@ class TestRegisterResponse:
         polling_machine = PollingMachine(state_based_mqtt)
 
         polling_machine._request_response_provider = mock_request_response_provider
-        mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
         mocker.patch.object(mock_request_response_provider, "disconnect")
@@ -212,7 +211,7 @@ class TestRegisterResponse:
         polling_machine._on_disconnect_completed_register()
 
         assert mock_request_response_provider.publish.call_count == 1
-        assert polling_machine.on_registration_complete.call_count == 1
+        # assert polling_machine.on_registration_complete.call_count == 1
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][0], RegistrationResult)
         registration_result = mock_callback.call_args[0][0]
@@ -232,7 +231,6 @@ class TestRegisterResponse:
         polling_machine = PollingMachine(state_based_mqtt)
         polling_machine._request_response_provider = mock_request_response_provider
 
-        mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
         mocker.patch.object(mock_request_response_provider, "disconnect")
@@ -273,7 +271,6 @@ class TestRegisterResponse:
         polling_machine = PollingMachine(state_based_mqtt)
         polling_machine._request_response_provider = mock_request_response_provider
 
-        mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
         mocker.patch.object(mock_request_response_provider, "disconnect")
@@ -476,7 +473,6 @@ class TestQueryResponse:
         polling_machine = PollingMachine(state_based_mqtt)
         polling_machine._request_response_provider = mock_request_response_provider
 
-        mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
         mocker.patch.object(mock_request_response_provider, "disconnect")
@@ -548,7 +544,6 @@ class TestQueryResponse:
         polling_machine._on_disconnect_completed_register()
 
         assert mock_request_response_provider.publish.call_count == 2
-        assert polling_machine.on_registration_complete.call_count == 1
         assert mock_callback.call_count == 1
         assert isinstance(mock_callback.call_args[0][0], RegistrationResult)
 
@@ -561,7 +556,6 @@ class TestQueryResponse:
         polling_machine = PollingMachine(state_based_mqtt)
         polling_machine._request_response_provider = mock_request_response_provider
 
-        mocker.patch.object(polling_machine, "on_registration_complete")
         mocker.patch.object(mock_request_response_provider, "subscribe")
         mocker.patch.object(mock_request_response_provider, "publish")
         mocker.patch.object(mock_request_response_provider, "disconnect")

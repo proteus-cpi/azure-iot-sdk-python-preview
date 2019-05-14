@@ -44,7 +44,7 @@ def test_create_from_security_provider_instantiates_client(
 ):
     client = create_from_security_client(provisioning_host, security_client, protocol)
     assert isinstance(client, SymmetricKeyProvisioningDeviceClient)
-    assert client.on_registration_complete is None
+    # assert client.on_registration_complete is None
 
 
 @pytest.mark.it("raises error if it is not symmetric security client")

@@ -28,9 +28,6 @@ class SymmetricKeyProvisioningDeviceClient(ProvisioningDeviceClient):
         """
         super(SymmetricKeyProvisioningDeviceClient, self).__init__(mqtt_state_based_provider)
         self._polling_machine = PollingMachine(mqtt_state_based_provider)
-        # To be defined by sample
-        self.on_registration_complete = None
-        self._polling_machine.on_registration_complete = self._on_device_registration_complete
 
     def register(self):
         """
@@ -78,14 +75,3 @@ class SymmetricKeyProvisioningDeviceClient(ProvisioningDeviceClient):
 
         self._polling_machine.cancel(callback=on_cancel_complete)
         cancel_complete.wait()
-
-    def _on_device_registration_complete(self, registration_result):
-        """Handler to be called by the transport when registration changes status."""
-        logger.info("_on_device_registration_complete")
-
-        if self.on_registration_complete:
-            try:
-                self.on_registration_complete(registration_result)
-            except:  # noqa: E722 do not use bare 'except'
-                logger.error("Unexpected error calling on_device_registration_complete")
-                logger.error(traceback.format_exc())

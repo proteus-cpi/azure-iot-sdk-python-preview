@@ -26,37 +26,8 @@ registration_client = create_from_security_client(
     provisioning_host, symmetric_key_security_client, "mqtt"
 )
 
-
-def registration_status_callback(registration_result):
-    print("Operation Id =", registration_result.operation_id)
-    print("Status =", registration_result.status)
-    print(registration_result.status)
-    if registration_result.status == "assigned":
-        print("Device has been registered")
-    else:
-        print("Failed registration attempt")
-
-    if registration_result.registration_state is not None:
-        print("Registration state details are:-")
-        print("Device Id =", registration_result.registration_state.device_id)
-        print("Assigned Hub =", registration_result.registration_state.assigned_hub)
-
-
-registration_client.on_registration_complete = registration_status_callback
-
 registration_client.register()
 
 
 # Output looks like
-# Operation Id = 4.550cb20c3349a409.c79cdcdc-ca44-46db-ad9c-9cd04d472ae0
-# Status = assigning
-# assigning
-# Device is registering
-# Operation Id = 4.550cb20c3349a409.c79cdcdc-ca44-46db-ad9c-9cd04d472ae0
-# Status = assigned
-# assigned
-# Device has been registered
-# Registration state details are:-
-# Device Id = hedwig
-# Assigned Hub = IOTHubQuickStart.azure-devices.net
-# """
+# INFO:azure.iot.device.provisioning.sk_provisioning_device_client:Successfully registered with Hub
