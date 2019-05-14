@@ -14,6 +14,9 @@ class SymmetricKeySecurityClient(object):
     """
     A client that is responsible for providing shared access tokens that will eventually establish
     the authenticity of devices to Device Provisioning Service.
+    :ivar registration_id: : The registration ID is used to uniquely identify a device in the Device Provisioning Service.
+    :ivar id_scope: : The ID scope is used to uniquely identify the specific provisioning service the device will
+        register through.
     """
 
     def __init__(self, registration_id, symmetric_key, id_scope):
@@ -33,6 +36,7 @@ class SymmetricKeySecurityClient(object):
         self._registration_id = registration_id
         self._symmetric_key = symmetric_key
         self._id_scope = id_scope
+        self._sas_token = None
 
     @property
     def registration_id(self):
@@ -61,8 +65,11 @@ class SymmetricKeySecurityClient(object):
         key = self._symmetric_key
         time_to_live = 3600
         keyname = "registration"
-        sas_token = SasToken(uri, key, keyname, time_to_live)
-        return str(sas_token)
+        return SasToken(uri, key, keyname, time_to_live)
 
     def get_current_sas_token(self):
-        return self._create_shared_access_signature()
+        if self._sas_token is None:
+            self._sas_token = self._create_shared_access_signature()
+        else:
+            self._sas_token.refresh()
+        return str(self._sas_token)

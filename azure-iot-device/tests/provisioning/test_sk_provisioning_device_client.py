@@ -98,10 +98,18 @@ def test_client_cancel_calls_polling_machine_cancel_with_callback(
     )
 
 
-@pytest.mark.it("client instantiates with a registration complete handler")
+@pytest.mark.it(
+    "client instantiates with a registration complete method called from polling machine"
+)
 def test_instantiation_sets_on_registration_complete_handler_in_polling_machine():
     client = SymmetricKeyProvisioningDeviceClient(state_based_mqtt)
     assert client._polling_machine.on_registration_complete is not None
     assert (
         client._polling_machine.on_registration_complete == client._on_device_registration_complete
     )
+
+
+@pytest.mark.it("client instantiates with a registration complete attribute")
+def test_instantiation_sets_on_registration_complete_attribute():
+    client = SymmetricKeyProvisioningDeviceClient(state_based_mqtt)
+    assert client.on_registration_complete is None

@@ -196,7 +196,7 @@ class PollingMachine(object):
             rid=rid,
             topic=constant.PUBLISH_TOPIC_REGISTRATION.format(rid),
             request=" ",
-            callback=self._handle_register_response_received,
+            callback=self._on_register_response_received,
         )
 
     def _query_operation_status(self, event_data):
@@ -215,10 +215,10 @@ class PollingMachine(object):
             rid=rid,
             topic=constant.PUBLISH_TOPIC_QUERYING.format(rid, operation_id),
             request=" ",
-            callback=self._handle_query_response_received,
+            callback=self._on_query_response_received,
         )
 
-    def _handle_register_response_received(self, url_portion, key_values_dict, response):
+    def _on_register_response_received(self, url_portion, key_values_dict, response):
         """
         The function to call in case of a response from a registration request.
         :param url_portion: The portion of the url containing the status code.
@@ -242,9 +242,9 @@ class PollingMachine(object):
             self._registration_error = ValueError("Incoming message failure")
             self._trig_error()
         else:  # successful case, transition into complete or poll status
-            self._handle_successful_response(rid, retry_after, response)
+            self._process_successful_response(rid, retry_after, response)
 
-    def _handle_query_response_received(self, url_portion, key_values_dict, response):
+    def _on_query_response_received(self, url_portion, key_values_dict, response):
         """
         The function to call in case of a response from a polling/query request.
         :param url_portion: The portion of the url containing the status code.
@@ -280,9 +280,9 @@ class PollingMachine(object):
             self._registration_error = ValueError("Incoming message failure")
             self._trig_error()
         else:  # successful status code case, transition into complete or another poll status
-            self._handle_successful_response(rid, retry_after, response)
+            self._process_successful_response(rid, retry_after, response)
 
-    def _handle_successful_response(self, rid, retry_after, response):
+    def _process_successful_response(self, rid, retry_after, response):
         """
         Fucntion to call in case of 200 response from the service
         :param rid: The request id

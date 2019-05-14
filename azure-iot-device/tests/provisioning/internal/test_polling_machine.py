@@ -89,7 +89,7 @@ class TestRegister:
             rid=fake_request_id,
             topic=constant.PUBLISH_TOPIC_REGISTRATION.format(fake_request_id),
             request=" ",
-            callback=mock_polling_machine._handle_register_response_received,
+            callback=mock_polling_machine._on_register_response_received,
         )
 
 

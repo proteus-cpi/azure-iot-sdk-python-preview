@@ -9,9 +9,12 @@ This module contains constants related to the transport package.
 
 __all__ = [
     "USER_AGENT",
+    "DEFAULT_POLLING_INTERVAL",
     "API_VERSION",
+    "DEFAULT_TIMEOUT_INTERVAL",
     "SUBSCRIBE_TOPIC_PROVISIONING",
     "PUBLISH_TOPIC_REGISTRATION",
+    "PUBLISH_TOPIC_QUERYING",
 ]
 
 USER_AGENT = "azure-iot-provisioning-devicesdk" + "/" + "0.0.1"
