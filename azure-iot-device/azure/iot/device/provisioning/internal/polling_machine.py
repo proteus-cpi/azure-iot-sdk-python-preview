@@ -40,8 +40,6 @@ class PollingMachine(object):
         self._register_callback = None
         self._cancel_callback = None
 
-        # self.on_registration_complete = None
-
         self._registration_error = None
         self._registration_result = None
 
