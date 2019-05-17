@@ -84,9 +84,8 @@ class TestInstantiation(object):
         provider = MQTTProvider(
             client_id=fake_device_id, hostname=fake_hostname, username=fake_username
         )
-
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
 
 @pytest.mark.describe("MQTT Provider - Connect")
@@ -405,8 +404,8 @@ class TestSubscribe(object):
 
         # Check callback is stored as pending, but not called
         assert callback.call_count == 0
-        assert provider._pending_operation_callbacks == {fake_mid: callback}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {fake_mid: callback}
+        assert provider._op_manager._unknown_operation_completions == {}
 
         # Manually trigger Paho on_subscribe event handler
         mock_mqtt_client.on_subscribe(
@@ -415,8 +414,8 @@ class TestSubscribe(object):
 
         # Check callback has now been called, and stored values cleared
         assert callback.call_count == 1
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Triggers callback upon subscribe completion when Paho event handler triggered early"
@@ -435,8 +434,8 @@ class TestSubscribe(object):
 
             # Check mid has been stored as an unknown response, callback not yet called
             assert callback.call_count == 0
-            assert provider._pending_operation_callbacks == {}
-            assert provider._unknown_operation_responses == {fake_mid: fake_mid}
+            assert provider._op_manager._pending_operation_callbacks == {}
+            assert provider._op_manager._unknown_operation_completions == {fake_mid: fake_mid}
 
             return (fake_rc, fake_mid)
 
@@ -447,8 +446,8 @@ class TestSubscribe(object):
 
         # Check callback has now been called, and stored values cleared
         assert callback.call_count == 1
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it("Skips callback that is set to 'None' upon subscribe completion")
     def test_none_callback_upon_paho_on_subscribe_event(self, mocker, mock_mqtt_client, provider):
@@ -459,8 +458,8 @@ class TestSubscribe(object):
         provider.subscribe(topic=fake_topic, qos=fake_qos, callback=callback)
 
         # Check that callback (None) has been stored
-        assert provider._pending_operation_callbacks == {fake_mid: callback}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {fake_mid: callback}
+        assert provider._op_manager._unknown_operation_completions == {}
 
         # Manually trigger Paho on_subscribe event handler
         mock_mqtt_client.on_subscribe(
@@ -468,8 +467,8 @@ class TestSubscribe(object):
         )
 
         # Check that callback (None) has now been cleared
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Skips callback that is set to 'None' upon subscribe completion when Paho event handler triggered early"
@@ -487,8 +486,8 @@ class TestSubscribe(object):
             )
 
             # Check mid has been stored as an unknown response, callback not yet called
-            assert provider._pending_operation_callbacks == {}
-            assert provider._unknown_operation_responses == {fake_mid: fake_mid}
+            assert provider._op_manager._pending_operation_callbacks == {}
+            assert provider._op_manager._unknown_operation_completions == {fake_mid: fake_mid}
 
             return (fake_rc, fake_mid)
 
@@ -498,8 +497,8 @@ class TestSubscribe(object):
         provider.subscribe(topic=fake_topic, qos=fake_qos, callback=callback)
 
         # Check callback (None) has now been cleared
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Handles multiple callbacks from multiple subscribe operations that complete out of order"
@@ -616,16 +615,16 @@ class TestUnsubscribe(object):
 
         # Check callback is stored as pending, but not called
         assert callback.call_count == 0
-        assert provider._pending_operation_callbacks == {fake_mid: callback}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {fake_mid: callback}
+        assert provider._op_manager._unknown_operation_completions == {}
 
         # Manually trigger Paho on_unsubscribe event handler
         mock_mqtt_client.on_unsubscribe(client=mock_mqtt_client, userdata=None, mid=fake_mid)
 
         # Check callback has now been called, and stored values cleared
         assert callback.call_count == 1
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Triggers callback upon unsubscribe completion when Paho event handler triggered early"
@@ -642,8 +641,8 @@ class TestUnsubscribe(object):
 
             # Check mid has been stored as an unknown response, callback not yet called
             assert callback.call_count == 0
-            assert provider._pending_operation_callbacks == {}
-            assert provider._unknown_operation_responses == {fake_mid: fake_mid}
+            assert provider._op_manager._pending_operation_callbacks == {}
+            assert provider._op_manager._unknown_operation_completions == {fake_mid: fake_mid}
 
             return (fake_rc, fake_mid)
 
@@ -654,8 +653,8 @@ class TestUnsubscribe(object):
 
         # Check callback has now been called, and stored values cleared
         assert callback.call_count == 1
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it("Skips callback that is set to 'None' upon unsubscribe completion")
     def test_none_callback_upon_paho_on_unsubscribe_event(self, mocker, mock_mqtt_client, provider):
@@ -666,15 +665,15 @@ class TestUnsubscribe(object):
         provider.unsubscribe(topic=fake_topic, callback=callback)
 
         # Check that callback (None) has been stored
-        assert provider._pending_operation_callbacks == {fake_mid: callback}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {fake_mid: callback}
+        assert provider._op_manager._unknown_operation_completions == {}
 
         # Manually trigger Paho on_unsubscribe event handler
         mock_mqtt_client.on_unsubscribe(client=mock_mqtt_client, userdata=None, mid=fake_mid)
 
         # Check that callback (None) has now been cleared
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Skips callback that is set to 'None' upon unsubscribe completion when Paho event handler triggered early"
@@ -690,8 +689,8 @@ class TestUnsubscribe(object):
             mock_mqtt_client.on_unsubscribe(client=mock_mqtt_client, userdata=None, mid=fake_mid)
 
             # Check mid has been stored as an unknown response, callback not yet called
-            assert provider._pending_operation_callbacks == {}
-            assert provider._unknown_operation_responses == {fake_mid: fake_mid}
+            assert provider._op_manager._pending_operation_callbacks == {}
+            assert provider._op_manager._unknown_operation_completions == {fake_mid: fake_mid}
 
             return (fake_rc, fake_mid)
 
@@ -701,8 +700,8 @@ class TestUnsubscribe(object):
         provider.unsubscribe(topic=fake_topic, callback=callback)
 
         # Check callback (None) has now been cleared
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Handles multiple callbacks from multiple unsubscribe operations that complete out of order"
@@ -852,16 +851,16 @@ class TestPublish(object):
 
         # Check callback is stored as pending, but not called
         assert callback.call_count == 0
-        assert provider._pending_operation_callbacks == {message_info.mid: callback}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {message_info.mid: callback}
+        assert provider._op_manager._unknown_operation_completions == {}
 
         # Manually trigger Paho on_publish event handler
         mock_mqtt_client.on_publish(client=mock_mqtt_client, userdata=None, mid=message_info.mid)
 
         # Check callback has now been called, and stored values cleared
         assert callback.call_count == 1
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Triggers callback upon publish completion when Paho event handler triggered early"
@@ -880,8 +879,10 @@ class TestPublish(object):
 
             # Check mid has been stored as an unknown response, callback not yet called
             assert callback.call_count == 0
-            assert provider._pending_operation_callbacks == {}
-            assert provider._unknown_operation_responses == {message_info.mid: message_info.mid}
+            assert provider._op_manager._pending_operation_callbacks == {}
+            assert provider._op_manager._unknown_operation_completions == {
+                message_info.mid: message_info.mid
+            }
 
             return message_info
 
@@ -892,8 +893,8 @@ class TestPublish(object):
 
         # Check callback has now been called, and stored values cleared
         assert callback.call_count == 1
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it("Skips callback that is set to 'None' upon publish completion")
     def test_none_callback_upon_paho_on_publish_event(
@@ -906,15 +907,15 @@ class TestPublish(object):
         provider.publish(topic=fake_topic, payload=fake_payload, callback=callback)
 
         # Check that callback (None) has been stored
-        assert provider._pending_operation_callbacks == {message_info.mid: callback}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {message_info.mid: callback}
+        assert provider._op_manager._unknown_operation_completions == {}
 
         # Manually trigger Paho on_publish event handler
         mock_mqtt_client.on_publish(client=mock_mqtt_client, userdata=None, mid=message_info.mid)
 
         # Check that callback (None) has now been cleared
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Skips callback that is set to 'None' upon publish completion when Paho event handler triggered early"
@@ -932,8 +933,10 @@ class TestPublish(object):
             )
 
             # Check mid has been stored as an unknown response, callback not yet called
-            assert provider._pending_operation_callbacks == {}
-            assert provider._unknown_operation_responses == {message_info.mid: message_info.mid}
+            assert provider._op_manager._pending_operation_callbacks == {}
+            assert provider._op_manager._unknown_operation_completions == {
+                message_info.mid: message_info.mid
+            }
 
             return message_info
 
@@ -943,8 +946,8 @@ class TestPublish(object):
         provider.publish(topic=fake_topic, payload=fake_payload, callback=callback)
 
         # Check callback (None) has now been cleared
-        assert provider._pending_operation_callbacks == {}
-        assert provider._unknown_operation_responses == {}
+        assert provider._op_manager._pending_operation_callbacks == {}
+        assert provider._op_manager._unknown_operation_completions == {}
 
     @pytest.mark.it(
         "Handles multiple callbacks from multiple publish operations that complete out of order"
