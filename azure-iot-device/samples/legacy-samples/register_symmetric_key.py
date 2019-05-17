@@ -13,7 +13,7 @@ from azure.iot.device import SymmetricKeySecurityClient
 from azure.iot.device import create_from_security_client
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 provisioning_host = os.getenv("PROVISIONING_HOST")
 id_scope = os.getenv("PROVISIONING_IDSCOPE")

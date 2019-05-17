@@ -7,6 +7,8 @@
 This module contains constants related to the transport package.
 """
 
+REGISTER = "register"
+QUERY = "query"
 
 USER_AGENT = "azure-iot-provisioning-devicesdk" + "/" + "0.0.1"
 """

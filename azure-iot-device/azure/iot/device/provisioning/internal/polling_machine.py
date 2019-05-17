@@ -216,7 +216,7 @@ class PollingMachine(object):
             callback=self._on_query_response_received,
         )
 
-    def _on_register_response_received(self, url_portion, key_values_dict, response):
+    def _on_register_response_received(self, rid, status_code, key_values_dict, response):
         """
         The function to call in case of a response from a registration request.
         :param url_portion: The portion of the url containing the status code.
@@ -225,9 +225,9 @@ class PollingMachine(object):
         """
         self._query_timer.cancel()
 
-        url_parts = url_portion.split("/")
-        status_code = url_parts[POS_STATUS_CODE_IN_TOPIC]
-        rid = str(key_values_dict["rid"][0])
+        # url_parts = url_portion.split("/")
+        # status_code = url_parts[POS_STATUS_CODE_IN_TOPIC]
+        # rid = str(key_values_dict["rid"][0])
         retry_after = (
             None if "retry-after" not in key_values_dict else str(key_values_dict["retry-after"][0])
         )
@@ -242,7 +242,7 @@ class PollingMachine(object):
         else:  # successful case, transition into complete or poll status
             self._process_successful_response(rid, retry_after, response)
 
-    def _on_query_response_received(self, url_portion, key_values_dict, response):
+    def _on_query_response_received(self, rid, status_code, key_values_dict, response):
         """
         The function to call in case of a response from a polling/query request.
         :param url_portion: The portion of the url containing the status code.
@@ -252,9 +252,9 @@ class PollingMachine(object):
         self._query_timer.cancel()
         self._polling_timer.cancel()
 
-        url_parts = url_portion.split("/")
-        status_code = url_parts[POS_STATUS_CODE_IN_TOPIC]
-        rid = str(key_values_dict["rid"][0])
+        # url_parts = url_portion.split("/")
+        # status_code = url_parts[POS_STATUS_CODE_IN_TOPIC]
+        # rid = str(key_values_dict["rid"][0])
         retry_after = (
             None if "retry-after" not in key_values_dict else str(key_values_dict["retry-after"][0])
         )

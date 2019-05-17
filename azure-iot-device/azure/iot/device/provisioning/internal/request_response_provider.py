@@ -56,35 +56,34 @@ class RequestResponseProvider(object):
             callback = self._on_unsubscribe_completed
         self._state_based_provider.unsubscribe(topic=topic, callback=callback)
 
-    def _receive_response(self, topic, payload):
+    def _receive_response(self, rid, status_code, key_value_dict, response):
         """
         Handler that processes the response from the service.
         :param topic: The topic in bytes name on which the message arrived on.
-        :param payload: Payload in bytes of the message received.
+        :param response: Payload in bytes of the message received.
         """
         # """ Sample topic and payload
         # $dps/registrations/res/200/?$rid=28c32371-608c-4390-8da7-c712353c1c3b
         # {"operationId":"4.550cb20c3349a409.390d2957-7b58-4701-b4f9-7fe848348f4a","status":"assigning"}
         # """
-        logger.info("Received payload:")
-        logger.info(payload)
+        logger.info("Received response {}:".format(response))
         # topic_str = topic.decode("utf-8")
-        if payload is not None:  # In cases of empty erroneous response from service
-            response = payload.decode("utf-8")
+        # if response is not None:  # In cases of empty erroneous response from service
+        #     response = response.decode("utf-8")
 
         # There may be no response when status code is >= 300
-        logger.info("Received response:{} on topic:{}".format(response, topic))
+        # logger.info("Received response:{} on topic:{}".format(response, topic))
 
-        if topic.startswith("$dps/registrations/res/"):
-            topic_parts = topic.split("$")
-            key_value_dict = urllib.parse.parse_qs(topic_parts[POS_QUERY_PARAM_PORTION])
-            rid = key_value_dict["rid"][0]
+        # if topic.startswith("$dps/registrations/res/"):
+        #     topic_parts = topic.split("$")
+        #     key_value_dict = urllib.parse.parse_qs(topic_parts[POS_QUERY_PARAM_PORTION])
+        #     rid = key_value_dict["rid"][0]
         # TODO Not DPS may have other ways to retrieve rid
 
         if rid in self._pending_requests:
             callback = self._pending_requests[rid]
             # Only send the status code and the portion of the topic containing query parameters
-            callback(topic_parts[POS_URL_PORTION], key_value_dict, response)
+            callback(status_code, key_value_dict, response)
             del self._pending_requests[rid]
 
     def _on_connection_state_change(self, new_state):

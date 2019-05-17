@@ -74,16 +74,43 @@ class SendRegistrationRequest(PipelineOperation):
     This operation is in the group of DPS operations because it is very specific to the DPS client.
     """
 
-    def __init__(self, request, callback=None):
+    def __init__(self, rid, request, callback=None):
         """
         Initializer for SendRegistrationRequest objects.
 
+        :param rid : The id of the request being sent
         :param request: The request that we are sending to the service
         :param Function callback: The function that gets called when this operation is complete or has failed.
          The callback function must accept A PipelineOperation object which indicates the specific operation which
          has completed or failed.
         """
         super(SendRegistrationRequest, self).__init__(callback=callback)
+        self.rid = rid
+        self.request = request
+        self.needs_connection = True
+
+
+class SendQueryRequest(PipelineOperation):
+    """
+    A PipelineOperation object which contains arguments used to send a registration request
+    to an Device Provisioning Hub.
+
+    This operation is in the group of DPS operations because it is very specific to the DPS client.
+    """
+
+    def __init__(self, rid, operation_id, request, callback=None):
+        """
+        Initializer for SendRegistrationRequest objects.
+
+        :param rid
+        :param request: The request that we are sending to the service
+        :param Function callback: The function that gets called when this operation is complete or has failed.
+         The callback function must accept A PipelineOperation object which indicates the specific operation which
+         has completed or failed.
+        """
+        super(SendQueryRequest, self).__init__(callback=callback)
+        self.rid = rid
+        self.operation_id = operation_id
         self.request = request
         self.needs_connection = True
 
