@@ -46,7 +46,7 @@ class SetSymmetricKeySecurityClientArgs(PipelineOperation):
     (such as a IotHub client).
     """
 
-    def __init__(self, provisioning_host, registration_id, id_scope, symmetric_key, callback=None):
+    def __init__(self, provisioning_host, registration_id, id_scope, callback=None):
         """
         Initializer for SetSymmetricKeySecurityClientArgs.
         :param registration_id: The registration ID is used to uniquely identify a device in the Device Provisioning Service.
@@ -64,7 +64,7 @@ class SetSymmetricKeySecurityClientArgs(PipelineOperation):
         self.provisioning_host = provisioning_host
         self.registration_id = registration_id
         self.id_scope = id_scope
-        self.symmetric_key = symmetric_key
+        # self.symmetric_key = symmetric_key
 
 
 class SendRegistrationRequest(PipelineOperation):
