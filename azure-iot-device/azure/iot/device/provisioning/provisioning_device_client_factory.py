@@ -11,6 +11,7 @@ from .security.sk_security_client import SymmetricKeySecurityClient
 
 from .sk_provisioning_device_client import SymmetricKeyProvisioningDeviceClient
 from .transport.state_based_mqtt_provider import StateBasedMQTTProvider
+from .transport.mqtt.mqtt_transport import MQTTTransport
 
 
 def create_from_security_client(provisioning_host, security_client, transport_choice):
@@ -26,7 +27,8 @@ def create_from_security_client(provisioning_host, security_client, transport_ch
     transport_choice = transport_choice.lower()
     if transport_choice == "mqtt":
         if isinstance(security_client, SymmetricKeySecurityClient):
-            mqtt_state_based_provider = StateBasedMQTTProvider(provisioning_host, security_client)
+            # mqtt_state_based_provider = StateBasedMQTTProvider(provisioning_host, security_client)
+            mqtt_state_based_provider = MQTTTransport(security_client)
             return SymmetricKeyProvisioningDeviceClient(mqtt_state_based_provider)
             # TODO : other instances of security provider can also be checked before creating mqtt and client
         else:

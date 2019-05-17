@@ -65,12 +65,24 @@ class PollingMachine(object):
                 "before": "_initialize_register",
                 "dest": "initializing",
             },
+            # {
+            #     "trigger": "_trig_register",
+            #     "source": "disconnected",
+            #     "before": "_send_register_request",
+            #     "dest": "registering",
+            # },
             {
                 "trigger": "_trig_register",
                 "source": "error",
                 "before": "_initialize_register",
                 "dest": "initializing",
             },
+            # {
+            #     "trigger": "_trig_register",
+            #     "source": "error",
+            #     "before": "_send_register_request",
+            #     "dest": "registering",
+            # },
             {"trigger": "_trig_register", "source": "registering", "dest": None},
             {
                 "trigger": "_trig_send_register_request",
@@ -190,11 +202,14 @@ class PollingMachine(object):
         rid = str(uuid.uuid4())
 
         self._operations[rid] = constant.PUBLISH_TOPIC_REGISTRATION.format(rid)
+        # self._request_response_provider.send_request(
+        #     rid=rid,
+        #     topic=constant.PUBLISH_TOPIC_REGISTRATION.format(rid),
+        #     request=" ",
+        #     callback=self._on_register_response_received,
+        # )
         self._request_response_provider.send_request(
-            rid=rid,
-            topic=constant.PUBLISH_TOPIC_REGISTRATION.format(rid),
-            request=" ",
-            callback=self._on_register_response_received,
+            rid=rid, request=" ", operation_id=None, callback=self._on_register_response_received
         )
 
     def _query_operation_status(self, event_data):
@@ -209,10 +224,16 @@ class PollingMachine(object):
 
         operation_id = result.operation_id
         self._operations[rid] = constant.PUBLISH_TOPIC_QUERYING.format(rid, operation_id)
+        # self._request_response_provider.send_request(
+        #     rid=rid,
+        #     topic=constant.PUBLISH_TOPIC_QUERYING.format(rid, operation_id),
+        #     request=" ",
+        #     callback=self._on_query_response_received,
+        # )
         self._request_response_provider.send_request(
             rid=rid,
-            topic=constant.PUBLISH_TOPIC_QUERYING.format(rid, operation_id),
             request=" ",
+            operation_id=operation_id,
             callback=self._on_query_response_received,
         )
 

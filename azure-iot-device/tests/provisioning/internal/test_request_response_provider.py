@@ -32,7 +32,7 @@ def request_response_provider():
 def test_connect_calls_connect_on_state_based_provider_with_provided_callback(
     request_response_provider
 ):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     mock_callback = MagicMock()
     request_response_provider.connect(mock_callback)
     mock_mqtt_state_based_provider.connect.assert_called_once_with(callback=mock_callback)
@@ -40,7 +40,7 @@ def test_connect_calls_connect_on_state_based_provider_with_provided_callback(
 
 @pytest.mark.it("connect calls connect on state based provider with defined callback")
 def test_connect_calls_connect_on_state_based_provider(request_response_provider):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     request_response_provider.connect()
     mock_mqtt_state_based_provider.connect.assert_called_once_with(
         callback=request_response_provider._on_connection_state_change
@@ -51,7 +51,7 @@ def test_connect_calls_connect_on_state_based_provider(request_response_provider
 def test_disconnect_calls_disconnect_on_state_based_provider_with_provided_callback(
     request_response_provider
 ):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     mock_callback = MagicMock()
     request_response_provider.disconnect(mock_callback)
     mock_mqtt_state_based_provider.disconnect.assert_called_once_with(callback=mock_callback)
@@ -59,7 +59,7 @@ def test_disconnect_calls_disconnect_on_state_based_provider_with_provided_callb
 
 @pytest.mark.it("disconnect calls disconnect on state based provider with defined callback")
 def test_disconnect_calls_disconnect_on_state_based_provider(request_response_provider):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     request_response_provider.disconnect()
     mock_mqtt_state_based_provider.disconnect.assert_called_once_with(
         callback=request_response_provider._on_connection_state_change
@@ -68,7 +68,7 @@ def test_disconnect_calls_disconnect_on_state_based_provider(request_response_pr
 
 @pytest.mark.it("send request calls publish on state based provider with message")
 def test_send_request_calls_publish_on_state_based_provider(request_response_provider):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     req = "Leviosa"
     mock_callback = MagicMock()
     request_response_provider.send_request(
@@ -83,7 +83,7 @@ def test_send_request_calls_publish_on_state_based_provider(request_response_pro
 
 @pytest.mark.it("publish calls publish on state based provider with message")
 def test_publish_calls_publish_on_state_based_provider(request_response_provider):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     req = "Leviosa"
     request_response_provider.publish(topic=fake_request_topic.format(fake_rid), request=req)
 
@@ -98,7 +98,7 @@ def test_publish_calls_publish_on_state_based_provider(request_response_provider
 def test_subscribe_calls_subscribe_on_state_based_provider_with_provided_callback(
     request_response_provider
 ):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     mock_callback = MagicMock()
     request_response_provider.subscribe(fake_subscribe_topic, mock_callback)
     mock_mqtt_state_based_provider.subscribe.assert_called_once_with(
@@ -108,7 +108,7 @@ def test_subscribe_calls_subscribe_on_state_based_provider_with_provided_callbac
 
 @pytest.mark.it("subscribe calls subscribe on state based provider with topic and defined callback")
 def test_subscribe_calls_subscribe_on_state_based_provider(request_response_provider):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     request_response_provider.subscribe(fake_subscribe_topic)
     mock_mqtt_state_based_provider.subscribe.assert_called_once_with(
         topic=fake_subscribe_topic, callback=request_response_provider._on_subscribe_completed
@@ -121,7 +121,7 @@ def test_subscribe_calls_subscribe_on_state_based_provider(request_response_prov
 def test_unsubscribe_calls_unsubscribe_on_state_based_provider_with_provided_callback(
     request_response_provider
 ):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     mock_callback = MagicMock()
     request_response_provider.unsubscribe(fake_subscribe_topic, mock_callback)
     mock_mqtt_state_based_provider.unsubscribe.assert_called_once_with(
@@ -133,7 +133,7 @@ def test_unsubscribe_calls_unsubscribe_on_state_based_provider_with_provided_cal
     "unsubscribe calls unsubscribe on state based provider with topic and defined callback"
 )
 def test_unsubscribe_calls_unsubscribe_on_state_based_provider(request_response_provider):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     request_response_provider.unsubscribe(fake_subscribe_topic)
     mock_mqtt_state_based_provider.unsubscribe.assert_called_once_with(
         topic=fake_subscribe_topic, callback=request_response_provider._on_unsubscribe_completed
@@ -144,7 +144,7 @@ def test_unsubscribe_calls_unsubscribe_on_state_based_provider(request_response_
 def test_on_provider_message_received_receives_response_and_calls_callback(
     request_response_provider
 ):
-    mock_mqtt_state_based_provider = request_response_provider._state_based_provider
+    mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     req = "Leviosa"
 
     mock_callback = MagicMock()

@@ -21,40 +21,41 @@ class RequestResponseProvider(object):
 
     def __init__(self, state_based_provider):
 
-        self._state_based_provider = state_based_provider
+        self._mqtt_transport = state_based_provider
 
-        self._state_based_provider.on_state_based_provider_message_received = self._receive_response
+        self._mqtt_transport.on_transport_message_received = self._receive_response
 
         self._pending_requests = {}
 
-    def send_request(self, rid, topic, request, callback):
+    def send_request(self, rid, request, operation_id, callback):
         self._pending_requests[rid] = callback
-        self.publish(topic=topic, request=request)
+        self._mqtt_transport.send_request(rid=rid, request=request, operation_id=operation_id)
+        # self.publish(topic=topic, request=request, callback=self._on_publish_completed)
 
     def connect(self, callback=None):
         if callback is None:
             callback = self._on_connection_state_change
-        self._state_based_provider.connect(callback=callback)
+        self._mqtt_transport.connect(callback=callback)
 
     def disconnect(self, callback=None):
         if callback is None:
             callback = self._on_connection_state_change
-        self._state_based_provider.disconnect(callback=callback)
+        self._mqtt_transport.disconnect(callback=callback)
 
     def publish(self, topic, request, callback=None):
         if callback is None:
             callback = self._on_publish_completed
-        self._state_based_provider.publish(topic=topic, message=request, callback=callback)
+        self._mqtt_transport.publish(topic=topic, message=request, callback=callback)
 
     def subscribe(self, topic, callback=None):
         if callback is None:
             callback = self._on_subscribe_completed
-        self._state_based_provider.subscribe(topic=topic, callback=callback)
+        self._mqtt_transport.enable_responses(callback=callback)
 
     def unsubscribe(self, topic, callback=None):
         if callback is None:
             callback = self._on_unsubscribe_completed
-        self._state_based_provider.unsubscribe(topic=topic, callback=callback)
+        self._mqtt_transport.disable_responses(callback=callback)
 
     def _receive_response(self, rid, status_code, key_value_dict, response):
         """

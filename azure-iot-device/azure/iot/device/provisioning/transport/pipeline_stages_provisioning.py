@@ -36,6 +36,7 @@ class UseSymmetricKeySecurityClient(PipelineStage):
             security_client = op.security_client
             self.run_ops_serial(
                 pipeline_ops_provisioning.SetSymmetricKeySecurityClientArgs(
+                    provisioning_host=security_client.provisioning_host,
                     registration_id=security_client.registration_id,
                     id_scope=security_client.id_scope,
                     symmetric_key=security_client.symmetric_key,

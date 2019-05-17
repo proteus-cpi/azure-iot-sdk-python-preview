@@ -172,15 +172,13 @@ class MQTTTransport(AbstractTransport):
     #         )
     #     )
 
-    def enable_feature(self, feature_name, callback=None):
+    def enable_responses(self, callback=None):
         """
-        Enable the given feature by subscribing to the appropriate topics.
+        Disable response from the DPS service by subscribing to the appropriate topics.
 
-        :param feature_name: one of the feature name constants from constant.py
         :param callback: callback which is called when the feature is enabled
         """
-        logger.info("enable_feature {} called".format(feature_name))
-        self.feature_enabled[feature_name] = True
+        logger.info("enable_responses called")
 
         def pipeline_callback(call):
             if call.error:
@@ -190,18 +188,16 @@ class MQTTTransport(AbstractTransport):
                 callback()
 
         self._pipeline.run_op(
-            pipeline_ops_base.EnableFeature(feature_name=feature_name, callback=pipeline_callback)
+            pipeline_ops_provisioning.EnableRegisterResponses(callback=pipeline_callback)
         )
 
-    def disable_feature(self, feature_name, callback=None):
+    def disable_responses(self, callback=None):
         """
-        Disable the given feature by subscribing to the appropriate topics.
+        Disable response from the DPS service by unsubscribing from the appropriate topics.
         :param callback: callback which is called when the feature is disabled
 
-        :param feature_name: one of the feature name constants from constant.py
         """
-        logger.info("disable_feature {} called".format(feature_name))
-        self.feature_enabled[feature_name] = False
+        logger.info("disable_responses called")
 
         def pipeline_callback(call):
             if call.error:
@@ -210,6 +206,4 @@ class MQTTTransport(AbstractTransport):
             if callback:
                 callback()
 
-        self._pipeline.run_op(
-            pipeline_ops_base.DisableFeature(feature_name=feature_name, callback=pipeline_callback)
-        )
+        self._pipeline.run_op(pipeline_ops_base.DisableFeature(callback=pipeline_callback))
