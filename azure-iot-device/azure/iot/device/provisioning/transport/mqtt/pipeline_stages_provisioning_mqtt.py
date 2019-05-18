@@ -5,13 +5,10 @@
 # --------------------------------------------------------------------------
 
 import logging
-import json
 import six.moves.urllib as urllib
-from azure.iot.device.common.transport import pipeline_ops_base
 from azure.iot.device.common.transport.mqtt import pipeline_ops_mqtt
 from azure.iot.device.common.transport.mqtt import pipeline_events_mqtt
 from azure.iot.device.common.transport.pipeline_stages_base import PipelineStage
-from azure.iot.device.provisioning.models import RegistrationResult
 from azure.iot.device.provisioning.transport import constant
 from azure.iot.device.provisioning.transport import (
     pipeline_events_provisioning,
@@ -24,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 class ProvisioningMQTTConverter(PipelineStage):
     """
-    PipelineStage which converts other Iot and IotHub operations into Mqtt operations.  This stage also
-    converts mqtt pipeline events into Iot and IotHub pipeline events.
+    PipelineStage which converts other Provisioning pipeline operations into Mqtt operations. This stage also
+    converts mqtt pipeline events into Provisioning pipeline events.
     """
 
     def __init__(self):
@@ -50,32 +47,11 @@ class ProvisioningMQTTConverter(PipelineStage):
 
             hostname = op.provisioning_host
 
-            # if op.module_id:
-            #     client_id = "{}/{}".format(op.device_id, op.module_id)
-            # else:
-            #     client_id = op.device_id
-            #
-            # username = "{hostname}/{client_id}/?api-version=2018-06-30".format(
-            #     hostname=op.hostname, client_id=client_id
-            # )
-
-            # if op.gateway_hostname:
-            #     hostname = op.gateway_hostname
-            # else:
-            #     hostname = op.hostname
-
             self.continue_with_different_op(
                 original_op=op,
                 new_op=pipeline_ops_mqtt.SetConnectionArgs(
                     client_id=client_id, hostname=hostname, username=username
                 ),
-            )
-
-        elif isinstance(op, pipeline_ops_provisioning.EnableRegisterResponses):
-            # Enabling for register gets translated into an Mqtt subscribe operation
-            topic = mqtt_topic.get_topic_for_subscribe()
-            self.continue_with_different_op(
-                original_op=op, new_op=pipeline_ops_mqtt.Subscribe(topic=topic)
             )
 
         elif isinstance(op, pipeline_ops_provisioning.SendRegistrationRequest):
@@ -92,18 +68,17 @@ class ProvisioningMQTTConverter(PipelineStage):
                 original_op=op, new_op=pipeline_ops_mqtt.Publish(topic=topic, payload=op.request)
             )
 
-        # elif isinstance(op, pipeline_ops_iothub.SendMethodResponse):
-        #     # Sending a Method Response gets translated into an MQTT Publish operation
-        #     topic = mqtt_topic.get_method_topic_for_publish(
-        #         op.method_response.request_id, str(op.method_response.status)
-        #     )
-        #     payload = json.dumps(op.method_response.payload)
-        #     self.continue_with_different_op(
-        #         original_op=op, new_op=pipeline_ops_mqtt.Publish(topic=topic, payload=payload)
-        #     )
+        # TODO : In the iothub case the enable and disable operations are defined in base.
+        # TODO: I felt this is very specific to DPS so this is defined in provisioning
+        elif isinstance(op, pipeline_ops_provisioning.EnableRegisterResponses):
+            # Enabling for register gets translated into an Mqtt subscribe operation
+            topic = mqtt_topic.get_topic_for_subscribe()
+            self.continue_with_different_op(
+                original_op=op, new_op=pipeline_ops_mqtt.Subscribe(topic=topic)
+            )
 
         elif isinstance(op, pipeline_ops_provisioning.DisableRegisterResponses):
-            # Disabling a feature gets turned into an Mqtt unsubscribe operation
+            # Disabling a register response gets turned into an Mqtt unsubscribe operation
             topic = mqtt_topic.get_topic_for_subscribe()
             self.continue_with_different_op(
                 original_op=op, new_op=pipeline_ops_mqtt.Unsubscribe(topic=topic)
@@ -112,16 +87,6 @@ class ProvisioningMQTTConverter(PipelineStage):
         else:
             # All other operations get passed down
             self.continue_op(op)
-
-    # def _set_topic_names(self, device_id, module_id):
-    #     """
-    #     Build topic names based on the device_id and module_id passed.
-    #     """
-    #     self.telemetry_topic = mqtt_topic.get_telemetry_topic_for_publish(device_id, module_id)
-    #     self.action_to_topic = {
-    #         constant.REGISTER: (mqtt_topic.get_c2d_topic_for_subscribe(device_id, module_id)),
-    #         constant.QUERY: (mqtt_topic.get_input_topic_for_subscribe(device_id, module_id)),
-    #     }
 
     def _handle_pipeline_event(self, event):
         """
@@ -142,9 +107,8 @@ class ProvisioningMQTTConverter(PipelineStage):
                 rid = key_values["rid"][0]
                 if event.payload is not None:
                     response = event.payload.decode("utf-8")
-                # TODO : If status code is common to all incoming messages,
-                # TODO : we can extract status code instead of sending portion of topic
-                # TODO : Does entire topic needs to be sent and processing done later
+                # Extract pertinent information from mqtt topic
+                # like status code rid and send it upwards.
                 self.handle_pipeline_event(
                     pipeline_events_provisioning.RegistrationResponseEvent(
                         rid, status_code, key_values, response

@@ -30,7 +30,6 @@ class RequestResponseProvider(object):
     def send_request(self, rid, request, operation_id, callback):
         self._pending_requests[rid] = callback
         self._mqtt_transport.send_request(rid=rid, request=request, operation_id=operation_id)
-        # self.publish(topic=topic, request=request, callback=self._on_publish_completed)
 
     def connect(self, callback=None):
         if callback is None:
@@ -68,23 +67,11 @@ class RequestResponseProvider(object):
         # {"operationId":"4.550cb20c3349a409.390d2957-7b58-4701-b4f9-7fe848348f4a","status":"assigning"}
         # """
         logger.info("Received response {}:".format(response))
-        # topic_str = topic.decode("utf-8")
-        # if response is not None:  # In cases of empty erroneous response from service
-        #     response = response.decode("utf-8")
-
-        # There may be no response when status code is >= 300
-        # logger.info("Received response:{} on topic:{}".format(response, topic))
-
-        # if topic.startswith("$dps/registrations/res/"):
-        #     topic_parts = topic.split("$")
-        #     key_value_dict = urllib.parse.parse_qs(topic_parts[POS_QUERY_PARAM_PORTION])
-        #     rid = key_value_dict["rid"][0]
-        # TODO Not DPS may have other ways to retrieve rid
 
         if rid in self._pending_requests:
             callback = self._pending_requests[rid]
             # Only send the status code and the portion of the topic containing query parameters
-            callback(status_code, key_value_dict, response)
+            callback(rid, status_code, key_value_dict, response)
             del self._pending_requests[rid]
 
     def _on_connection_state_change(self, new_state):

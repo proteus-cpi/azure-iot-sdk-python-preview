@@ -37,7 +37,7 @@ def get_topic_for_query(rid, operation_id):
     :return: The topic for cloud to device messages.It is of the format
     "devices/<deviceid>/messages/devicebound/#"
     """
-    return (_get_topic_base() + "GET/iotdps-get-operationstatus/?$rid={}&operationId={}").format(
+    return (_get_topic_base() + "GET/iotdps-get-operationstatus/?$rid={rid}&operationId={operation_id}").format(
         rid=rid, operation_id=operation_id
     )
 

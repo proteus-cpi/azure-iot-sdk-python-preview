@@ -5,8 +5,6 @@
 # --------------------------------------------------------------------------
 from azure.iot.device.common.transport.pipeline_ops_base import PipelineOperation
 
-# TODO : Should this be named just SecurityProvider or SecurityClient?
-
 
 class SetSymmetricKeySecurityClient(PipelineOperation):
     """
@@ -154,27 +152,3 @@ class DisableRegisterResponses(PipelineOperation):
         """
         super(DisableRegisterResponses, self).__init__(callback=callback)
         self.needs_connection = True
-
-
-#
-# class SendMethodResponse(PipelineOperation):
-#     """
-#     A PipleineOperation object which contains arguments used to send a method response to an IoTHub or EdgeHub server.
-#
-#     This operation is in the group of IoTHub operations because it is very specific to the IoTHub client.
-#     """
-#
-#     def __init__(self, method_response, callback=None):
-#         """
-#         Initializer for SendMethodResponse objects.
-#
-#         :param method_response: The method response to be sent to IoTHub/EdgeHub
-#         :type method_response: MethodResponse
-#         :param callback: The function that gets called when this operation is complete or has failed.
-#          The callback function must accept a PipelineOperation object which indicates the specific operation has which
-#          has completed or failed.
-#         :type callback: Function/callable
-#         """
-#         super(SendMethodResponse, self).__init__(callback=callback)
-#         self.method_response = method_response
-#         self.needs_connection = True

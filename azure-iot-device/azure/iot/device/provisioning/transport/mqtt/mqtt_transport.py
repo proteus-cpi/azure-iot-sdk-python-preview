@@ -21,7 +21,7 @@ class MQTTTransport(AbstractTransport):
     def __init__(self, security_client):
         """
         Constructor for instantiating a transport
-        :param auth_provider: The authentication provider
+        :param security_client: The security client which stores credentials
         """
         AbstractTransport.__init__(self, security_client)
         self._pipeline = (
@@ -40,18 +40,6 @@ class MQTTTransport(AbstractTransport):
                     )
                 else:
                     logger.warning("C2D event received with no handler.  dropping.")
-
-            # elif isinstance(event, pipeline_events_iothub.InputMessageEvent):
-            #     if self.on_transport_input_message_received:
-            #         self.on_transport_input_message_received(event.input_name, event.message)
-            #     else:
-            #         logger.warning("input mesage event received with no handler.  dropping.")
-            #
-            # elif isinstance(event, pipeline_events_iothub.MethodRequest):
-            #     if self.on_transport_method_request_received(event.method_request):
-            #         self.on_transport_method_request_received(event.method_request)
-            #     else:
-            #         logger.warning("Method request event received with no handler. Dropping.")
 
             else:
                 logger.warning("Dropping unknown pipeline event {}".format(event.name))
@@ -114,11 +102,12 @@ class MQTTTransport(AbstractTransport):
 
     def send_request(self, rid, request, operation_id=None, callback=None):
         """
-        Send a telemetry message to the service.
-
+        Send a request to the Device Provisioning Service.
+        :param rid: The id of the request
+        :param request: The request which is to be sent.
+        :param operation_id: The id of the operation.
         :param callback: callback which is called when the message publish has been acknowledged by the service.
         """
-
         def pipeline_callback(call):
             if call.error:
                 # TODO we need error semantics on the client
@@ -137,40 +126,6 @@ class MQTTTransport(AbstractTransport):
             )
 
         self._pipeline.run_op(op)
-
-    # def send_output_event(self, message, callback=None):
-    #     """
-    #     Send an output message to the service.
-    #
-    #     :param callback: callback which is called when the message publish has been acknowledged by the service.
-    #     """
-    #
-    #     def pipeline_callback(call):
-    #         if call.error:
-    #             # TODO we need error semantics on the client
-    #             exit(1)
-    #         if callback:
-    #             callback()
-    #
-    #     self._pipeline.run_op(
-    #         pipeline_ops_iothub.SendOutputEvent(message=message, callback=pipeline_callback)
-    #     )
-    #
-    # def send_method_response(self, method_response, callback=None):
-    #     logger.info("Transport send_method_response called")
-    #
-    #     def pipeline_callback(call):
-    #         if call.error:
-    #             # TODO we need error semantics on the client
-    #             exit(1)
-    #         if callback:
-    #             callback()
-    #
-    #     self._pipeline.run_op(
-    #         pipeline_ops_iothub.SendMethodResponse(
-    #             method_response=method_response, callback=pipeline_callback
-    #         )
-    #     )
 
     def enable_responses(self, callback=None):
         """
