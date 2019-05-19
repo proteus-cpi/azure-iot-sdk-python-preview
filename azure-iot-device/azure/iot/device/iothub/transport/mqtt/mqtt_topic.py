@@ -64,24 +64,24 @@ def get_method_topic_for_subscribe():
     return "$iothub/methods/POST/#"
 
 
-def is_c2d_topic(topic):
+def is_c2d_topic(topic, device_id):
     """
     Topics for c2d message are of the following format:
     devices/<deviceId>/messages/devicebound
     :param topic: The topic string
     """
-    if "messages/devicebound" in topic:
+    if "devices/{}/messages/devicebound".format(device_id) in topic:
         return True
     return False
 
 
-def is_input_topic(topic):
+def is_input_topic(topic, device_id, module_id):
     """
     Topics for inputs are of the following format:
     devices/<deviceId>/modules/<moduleId>/inputs/<inputName>
     :param topic: The topic string
     """
-    if "/inputs/" in topic:
+    if "devices/{}/modules/{}/inputs/".format(device_id, module_id) in topic:
         return True
     return False
 
@@ -172,34 +172,41 @@ def extract_properties_from_topic(topic, message_received):
     """
 
     parts = topic.split("/")
-    if len(parts) > 5 and parts[4] == "inputs":
-        properties = parts[6]
-    elif len(parts) > 4 and parts[3] == "devicebound":
-        properties = parts[4]
+    if len(parts) > 4 and parts[4] == "inputs":
+        if len(parts) > 6:
+            properties = parts[6]
+        else:
+            properties = None
+    elif len(parts) > 3 and parts[3] == "devicebound":
+        if len(parts) > 4:
+            properties = parts[4]
+        else:
+            properties = None
     else:
         raise ValueError("topic has incorrect format")
 
-    key_value_pairs = properties.split("&")
+    if properties:
+        key_value_pairs = properties.split("&")
 
-    for entry in key_value_pairs:
-        pair = entry.split("=")
-        key = urllib.parse.unquote_plus(pair[0])
-        value = urllib.parse.unquote_plus(pair[1])
+        for entry in key_value_pairs:
+            pair = entry.split("=")
+            key = urllib.parse.unquote_plus(pair[0])
+            value = urllib.parse.unquote_plus(pair[1])
 
-        if key == "$.mid":
-            message_received.message_id = value
-        elif key == "$.cid":
-            message_received.correlation_id = value
-        elif key == "$.uid":
-            message_received.user_id = value
-        elif key == "$.to":
-            message_received.to = value
-        elif key == "$.ct":
-            message_received.content_type = value
-        elif key == "$.ce":
-            message_received.content_encoding = value
-        else:
-            message_received.custom_properties[key] = value
+            if key == "$.mid":
+                message_received.message_id = value
+            elif key == "$.cid":
+                message_received.correlation_id = value
+            elif key == "$.uid":
+                message_received.user_id = value
+            elif key == "$.to":
+                message_received.to = value
+            elif key == "$.ct":
+                message_received.content_type = value
+            elif key == "$.ce":
+                message_received.content_encoding = value
+            else:
+                message_received.custom_properties[key] = value
 
 
 # TODO: this has too generic a name, given that it's only for messages
