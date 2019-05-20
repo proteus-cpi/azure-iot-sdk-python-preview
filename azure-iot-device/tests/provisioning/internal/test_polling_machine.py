@@ -61,7 +61,7 @@ class TestRegister:
         mock_request_response_provider = mock_polling_machine._request_response_provider
         mock_polling_machine.register()
 
-        mock_request_response_provider.subscribe.assert_called_once_with(
+        mock_request_response_provider.enable_responses.assert_called_once_with(
             topic=constant.SUBSCRIBE_TOPIC_PROVISIONING,
             callback=mock_polling_machine._on_subscribe_completed,
         )
