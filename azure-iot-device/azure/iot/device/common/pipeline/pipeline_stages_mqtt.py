@@ -5,11 +5,11 @@
 # --------------------------------------------------------------------------
 
 import logging
-from azure.iot.device.common.transport.pipeline_stages_base import PipelineStage
-from azure.iot.device.common.transport import pipeline_ops_base
+from azure.iot.device.common.pipeline.pipeline_stages_base import PipelineStage
+from azure.iot.device.common.pipeline import pipeline_ops_base
 from . import pipeline_ops_mqtt
 from . import pipeline_events_mqtt
-from azure.iot.device.common.transport.mqtt.mqtt_provider import MQTTProvider
+from azure.iot.device.common.mqtt_provider import MQTTProvider
 
 logger = logging.getLogger(__name__)
 
