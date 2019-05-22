@@ -10,7 +10,7 @@ from mock import MagicMock
 from azure.iot.device.provisioning.internal.request_response_provider import RequestResponseProvider
 from azure.iot.device.provisioning.internal.polling_machine import PollingMachine
 from azure.iot.device.provisioning.models.registration_result import RegistrationResult
-from azure.iot.device.provisioning.transport import constant
+from azure.iot.device.provisioning.pipeline import constant
 import time
 
 fake_request_id = "Request1234"
@@ -395,7 +395,9 @@ class TestQueryResponse:
     constant.DEFAULT_TIMEOUT_INTERVAL = 3
     constant.DEFAULT_POLLING_INTERVAL = 0.2
 
-    @pytest.mark.it("does query again when there is a response with 'assigning' registration status")
+    @pytest.mark.it(
+        "does query again when there is a response with 'assigning' registration status"
+    )
     def test_receive_query_response_assigning_does_query_again_with_same_operation_id(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -467,7 +469,9 @@ class TestQueryResponse:
             request=" ",
         )
 
-    @pytest.mark.it("completes registration process when there is a query response with 'assigned' registration status")
+    @pytest.mark.it(
+        "completes registration process when there is a query response with 'assigned' registration status"
+    )
     def test_receive_query_response_assigned_completes_registration(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)
@@ -692,9 +696,7 @@ class TestCancel:
     constant.DEFAULT_TIMEOUT_INTERVAL = 3
     constant.DEFAULT_POLLING_INTERVAL = 0.2
 
-    @pytest.mark.it(
-        "calls disconnect on RequestResponseProvider and calls callback"
-    )
+    @pytest.mark.it("calls disconnect on RequestResponseProvider and calls callback")
     def test_cancel_disconnects_on_request_response_provider_and_calls_callback(
         self, mock_polling_machine
     ):
@@ -713,9 +715,7 @@ class TestCancel:
 
         assert mock_cancel_callback.call_count == 1
 
-    @pytest.mark.it(
-        "calls disconnect on RequestResponseProvider, clears timers and calls callback"
-    )
+    @pytest.mark.it("calls disconnect on RequestResponseProvider, clears timers and calls callback")
     def test_register_and_cancel_clears_timers_and_disconnects(self, mocker):
         state_based_mqtt = MagicMock()
         mock_request_response_provider = TestRequestResponseProvider(state_based_mqtt)

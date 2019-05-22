@@ -66,27 +66,29 @@ def test_disconnect_calls_disconnect_on_state_based_provider(request_response_pr
     )
 
 
-@pytest.mark.it("send request calls send request on mqtt transport with request")
+@pytest.mark.it("send request calls send request on pipelinemqtt pipeline with request")
 def test_send_request_calls_publish_on_state_based_provider(request_response_provider):
     mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     req = "Leviosa"
     mock_callback = MagicMock()
     request_response_provider.send_request(
-        rid=fake_rid, request=req, operation_id=fake_operation_id, callback_on_response=mock_callback
+        rid=fake_rid,
+        request=req,
+        operation_id=fake_operation_id,
+        callback_on_response=mock_callback,
     )
     assert mock_mqtt_state_based_provider.send_request.call_count == 1
     print(mock_mqtt_state_based_provider.send_request.call_args)
-    assert mock_mqtt_state_based_provider.send_request.call_args[1][
-        "operation_id"
-    ] == fake_operation_id
-    assert mock_mqtt_state_based_provider.send_request.call_args[1][
-               "rid"
-           ] == fake_rid
+    assert (
+        mock_mqtt_state_based_provider.send_request.call_args[1]["operation_id"]
+        == fake_operation_id
+    )
+    assert mock_mqtt_state_based_provider.send_request.call_args[1]["rid"] == fake_rid
 
     assert mock_mqtt_state_based_provider.send_request.call_args[1]["request"] == req
 
 
-@pytest.mark.it("publish calls publish on mqtt transport with message")
+@pytest.mark.it("publish calls publish on pipelinemqtt pipeline with message")
 def test_publish_calls_publish_on_state_based_provider(request_response_provider):
     mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     req = "Leviosa"
@@ -106,9 +108,7 @@ def test_subscribe_calls_subscribe_on_state_based_provider_with_provided_callbac
     mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     mock_callback = MagicMock()
     request_response_provider.enable_responses(mock_callback)
-    mock_mqtt_state_based_provider.enable_responses.assert_called_once_with(
-        callback=mock_callback
-    )
+    mock_mqtt_state_based_provider.enable_responses.assert_called_once_with(callback=mock_callback)
 
 
 @pytest.mark.it("subscribe calls subscribe on state based provider with topic and defined callback")
@@ -129,9 +129,7 @@ def test_unsubscribe_calls_unsubscribe_on_state_based_provider_with_provided_cal
     mock_mqtt_state_based_provider = request_response_provider._mqtt_transport
     mock_callback = MagicMock()
     request_response_provider.disable_responses(mock_callback)
-    mock_mqtt_state_based_provider.disable_responses.assert_called_once_with(
-        callback=mock_callback
-    )
+    mock_mqtt_state_based_provider.disable_responses.assert_called_once_with(callback=mock_callback)
 
 
 @pytest.mark.it(
@@ -154,7 +152,10 @@ def test_on_provider_message_received_receives_response_and_calls_callback(
 
     mock_callback = MagicMock()
     request_response_provider.send_request(
-        rid=fake_rid, request=req, operation_id=fake_operation_id, callback_on_response=mock_callback
+        rid=fake_rid,
+        request=req,
+        operation_id=fake_operation_id,
+        callback_on_response=mock_callback,
     )
     assigning_status = "assigning"
 
@@ -164,8 +165,6 @@ def test_on_provider_message_received_receives_response_and_calls_callback(
     key_value_dict = urllib.parse.parse_qs(topic_parts[POS_QUERY_PARAM_PORTION])
 
     mock_payload = payload.encode("utf-8")
-    mock_mqtt_transport.on_transport_message_received(fake_rid, "202", key_value_dict,
-        mock_payload)
+    mock_mqtt_transport.on_transport_message_received(fake_rid, "202", key_value_dict, mock_payload)
 
-    mock_callback.assert_called_once_with(fake_rid, "202", key_value_dict,
-        mock_payload)
+    mock_callback.assert_called_once_with(fake_rid, "202", key_value_dict, mock_payload)

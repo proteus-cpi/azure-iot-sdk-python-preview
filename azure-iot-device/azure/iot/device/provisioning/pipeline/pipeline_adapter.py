@@ -8,22 +8,30 @@ import logging
 from azure.iot.device.common.transport import pipeline_stages_base
 from azure.iot.device.common.transport import pipeline_ops_base
 from azure.iot.device.common.transport.mqtt import pipeline_stages_mqtt
-from azure.iot.device.provisioning.transport.abstract_transport import AbstractTransport
-from azure.iot.device.provisioning.transport import pipeline_stages_provisioning
-from azure.iot.device.provisioning.transport import pipeline_events_provisioning
-from azure.iot.device.provisioning.transport import pipeline_ops_provisioning
-from . import pipeline_stages_provisioning_mqtt
+from azure.iot.device.provisioning.pipeline import (
+    pipeline_stages_provisioning,
+    pipeline_stages_provisioning_mqtt,
+)
+from azure.iot.device.provisioning.pipeline import pipeline_events_provisioning
+from azure.iot.device.provisioning.pipeline import pipeline_ops_provisioning
 
 logger = logging.getLogger(__name__)
 
 
-class MQTTTransport(AbstractTransport):
+class PipelineAdapter(object):
     def __init__(self, security_client):
         """
-        Constructor for instantiating a transport
+        Constructor for instantiating a pipeline
         :param security_client: The security client which stores credentials
         """
-        AbstractTransport.__init__(self, security_client)
+        # self._auth_provider = security_client
+
+        # Event Handlers - Will be set by Client after instantiation of Transport
+        self.on_transport_connected = None
+        self.on_transport_disconnected = None
+        self.on_transport_message_received = None
+
+        # AbstractTransport.__init__(self, security_client)
         self._pipeline = (
             pipeline_stages_base.PipelineRoot()
             .append_stage(pipeline_stages_provisioning.UseSymmetricKeySecurityClient())

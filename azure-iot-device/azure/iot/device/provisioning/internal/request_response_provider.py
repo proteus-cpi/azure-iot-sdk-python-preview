@@ -36,7 +36,9 @@ class RequestResponseProvider(object):
         :param callback_on_response: callback which is called when response comes back for this request.
         """
         self._pending_requests[rid] = callback_on_response
-        self._mqtt_transport.send_request(rid=rid, request=request, operation_id=operation_id, callback=self._on_publish_completed)
+        self._mqtt_transport.send_request(
+            rid=rid, request=request, operation_id=operation_id, callback=self._on_publish_completed
+        )
 
     def connect(self, callback=None):
         if callback is None:
@@ -85,7 +87,7 @@ class RequestResponseProvider(object):
             del self._pending_requests[rid]
 
     def _on_connection_state_change(self, new_state):
-        """Handler to be called by the transport upon a connection state change."""
+        """Handler to be called by the pipeline upon a connection state change."""
         logger.info("Connection State - {}".format(new_state))
 
     def _on_publish_completed(self):

@@ -5,7 +5,7 @@
 # --------------------------------------------------------------------------
 import pytest
 from azure.iot.device.provisioning.security.sk_security_client import SymmetricKeySecurityClient
-from azure.iot.device.provisioning.transport.state_based_mqtt_provider import StateBasedMQTTProvider
+from azure.iot.device.provisioning.pipeline.state_based_mqtt_provider import StateBasedMQTTProvider
 from azure.iot.device.provisioning.sk_provisioning_device_client import (
     SymmetricKeyProvisioningDeviceClient,
 )
@@ -34,7 +34,7 @@ def security_client():
 @pytest.mark.parametrize(
     "protocol,expected_transport",
     [
-        pytest.param("mqtt", StateBasedMQTTProvider, id="mqtt"),
+        pytest.param("pipelinemqtt", StateBasedMQTTProvider, id="pipelinemqtt"),
         pytest.param("amqp", None, id="amqp", marks=xfail_notimplemented),
         pytest.param("http", None, id="http", marks=xfail_notimplemented),
     ],
@@ -53,7 +53,9 @@ def test_raises_when_client_created_from_security_provider_with_not_symmetric_se
         ValueError, match="A symmetric key security provider must be provided for MQTT"
     ):
         not_symmetric_security_client = NonSymmetricSecurityClientTest()
-        create_from_security_client(provisioning_host, not_symmetric_security_client, "mqtt")
+        create_from_security_client(
+            provisioning_host, not_symmetric_security_client, "pipelinemqtt"
+        )
 
 
 class NonSymmetricSecurityClientTest(object):

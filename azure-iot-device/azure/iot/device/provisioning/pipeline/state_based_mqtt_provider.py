@@ -23,19 +23,19 @@ logger = logging.getLogger(__name__)
 """
 A note on names, design, and code flow:
 
-This transport is a state machine which is responsible for coordinating
+This pipeline is a state machine which is responsible for coordinating
 several different things.  (I would like to say that it coordinates several
 events, but the word "event" is very overloaded, especially in this context,
 so I hesitate to add one more overload).
 
 In particular, it needs to coordinate external things:
     1. Things the caller wants to do, such as "connect", "send message", etc.
-    2. Calls into the transport provider
-    3. Completion callbacks from the transport provider.
+    2. Calls into the pipeline provider
+    3. Completion callbacks from the pipeline provider.
     4. Completion callbacks from this object into the caller.
 
 and also internal things:
-    5. The "state" of transport (connected, disconnected, etc).
+    5. The "state" of pipeline (connected, disconnected, etc).
     6. Transitions between possible states.
 
 Since one caller-initiated action results in many different things happening, this
@@ -50,7 +50,7 @@ class uses the following conventions:
 2. Actions will typically trigger a state machine event.  State machine triggers, wihch may
     or may not change state, are all prefixed with _trig_ (_trig_connect, _trig_add_pending_action_to_queue, etc)
     The "_trig" indicates that this is a operation on the state machine.  _trig_* functions are also unusual in
-    that they get added to the transport object at runtime when intiializing the Machine object.
+    that they get added to the pipeline object at runtime when intiializing the Machine object.
 
 3. Functions which call into the provider are prefixed with "_call_provider_", such as _call_provider_connect.
     These are always called as part of state machine transitions.  Calls from the caller should not go directly into the
@@ -81,10 +81,10 @@ TOPIC_POS_INPUT_NAME = 5
 class TransportAction(object):
     """
     base class representing various actions that can be taken
-    when the transport is connected.  When the MqttTransport user
-    calls a function that requires the transport to be connected,
+    when the pipeline is connected.  When the MqttTransport user
+    calls a function that requires the pipeline to be connected,
     a TransportAction object is created and added to the action
-    queue.  Then, when the transport is actually connected, it
+    queue.  Then, when the pipeline is actually connected, it
     loops through the objects in the action queue and executes them
     one by one.
     """
@@ -152,14 +152,14 @@ class MethodReponseAction(TransportAction):
 class StateBasedMQTTProvider:
     def __init__(self, provisioning_host, security_client):
         """
-        Constructor for instantiating a transport
+        Constructor for instantiating a pipeline
         """
         self._mqtt_provider = None
 
         self.security_client = security_client
         self.provisioning_host = provisioning_host
 
-        # Queue of actions that will be executed once the transport is connected.
+        # Queue of actions that will be executed once the pipeline is connected.
         # Currently, we use a queue, which is FIFO, but the actual order doesn't matter
         # since each action stands on its own.
         self._pending_action_queue = queue.Queue()
@@ -276,7 +276,7 @@ class StateBasedMQTTProvider:
 
     def _call_provider_connect(self, event_data):
         """
-        Call into the provider to connect the transport.
+        Call into the provider to connect the pipeline.
 
         This is called by the state machine as part of a state transition
 
@@ -291,7 +291,7 @@ class StateBasedMQTTProvider:
 
     def _call_provider_disconnect(self, event_data):
         """
-        Call into the provider to disconnect the transport.
+        Call into the provider to disconnect the pipeline.
 
         This is called by the state machine as part of a state transition
 
@@ -302,7 +302,7 @@ class StateBasedMQTTProvider:
 
     def _call_provider_reconnect(self, event_data):
         """
-        Call into the provider to reconnect the transport.
+        Call into the provider to reconnect the pipeline.
 
         This is called by the state machine as part of a state transition
 
@@ -367,7 +367,7 @@ class StateBasedMQTTProvider:
 
     def _execute_action(self, action):
         """
-        Execute an action from the action queue.  This is called when the transport is connected and the
+        Execute an action from the action queue.  This is called when the pipeline is connected and the
         state machine is able to execute individual actions.
 
         :param TransportAction action: object containing the details of the action to be executed
@@ -516,7 +516,7 @@ class StateBasedMQTTProvider:
         self._disconnect_callback = callback
         self._trig_disconnect()
 
-    # TODO : Should be move to state based provider after breaking apart transport
+    # TODO : Should be move to state based provider after breaking apart pipeline
     def publish(self, topic, message, callback=None):
         """
         Send a telemetry message to the service.
@@ -533,12 +533,12 @@ class StateBasedMQTTProvider:
         action = SendMessageAction(message=message, callback=callback)
         self._trig_add_action_to_pending_queue(action)
 
-    # TODO : Should be move to state based provider after breaking apart transport
+    # TODO : Should be move to state based provider after breaking apart pipeline
     def subscribe(self, topic, callback=None):
         action = SubscribeAction(topic=topic, callback=callback)
         self._trig_add_action_to_pending_queue(action)
 
-    # TODO : Should be move to state based provider after breaking apart transport
+    # TODO : Should be move to state based provider after breaking apart pipeline
     def unsubscribe(self, topic, callback=None):
         action = UnsubscribeAction(topic, callback)
         self._trig_add_action_to_pending_queue(action)

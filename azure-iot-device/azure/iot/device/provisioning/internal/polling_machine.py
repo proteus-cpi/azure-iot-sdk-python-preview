@@ -9,7 +9,7 @@ import json
 import traceback
 from threading import Timer
 from transitions import Machine
-from ..transport import constant
+from ..pipeline import constant
 import six.moves.urllib as urllib
 from .request_response_provider import RequestResponseProvider
 from ..models.registration_result import RegistrationResult, RegistrationState

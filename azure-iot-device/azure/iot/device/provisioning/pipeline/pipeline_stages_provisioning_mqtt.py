@@ -9,13 +9,12 @@ import six.moves.urllib as urllib
 from azure.iot.device.common.transport.mqtt import pipeline_ops_mqtt
 from azure.iot.device.common.transport.mqtt import pipeline_events_mqtt
 from azure.iot.device.common.transport.pipeline_stages_base import PipelineStage
-from azure.iot.device.provisioning.transport import constant
-from azure.iot.device.provisioning.transport import (
+from azure.iot.device.provisioning.pipeline import constant, mqtt_topic
+from azure.iot.device.provisioning.pipeline import (
     pipeline_events_provisioning,
     pipeline_ops_provisioning,
 )
 from azure.iot.device.common.transport import pipeline_ops_base
-from . import mqtt_topic
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 class ProvisioningMQTTConverter(PipelineStage):
     """
     PipelineStage which converts other Provisioning pipeline operations into Mqtt operations. This stage also
-    converts mqtt pipeline events into Provisioning pipeline events.
+    converts pipelinemqtt pipeline events into Provisioning pipeline events.
     """
 
     def __init__(self):
@@ -108,7 +107,7 @@ class ProvisioningMQTTConverter(PipelineStage):
                 rid = key_values["rid"][0]
                 if event.payload is not None:
                     response = event.payload.decode("utf-8")
-                # Extract pertinent information from mqtt topic
+                # Extract pertinent information from pipelinemqtt topic
                 # like status code rid and send it upwards.
                 self.handle_pipeline_event(
                     pipeline_events_provisioning.RegistrationResponseEvent(

@@ -18,7 +18,7 @@ from azure.iot.device.provisioning.models.registration_result import (
     RegistrationState,
 )
 from azure.iot.device.provisioning.security.sk_security_client import SymmetricKeySecurityClient
-from azure.iot.device.provisioning.transport.state_based_mqtt_provider import StateBasedMQTTProvider
+from azure.iot.device.provisioning.pipeline.state_based_mqtt_provider import StateBasedMQTTProvider
 from azure.iot.device.provisioning.sk_provisioning_device_client import (
     SymmetricKeyProvisioningDeviceClient,
 )

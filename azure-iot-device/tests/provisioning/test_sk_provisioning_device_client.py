@@ -11,7 +11,7 @@ from azure.iot.device.provisioning.sk_provisioning_device_client import (
     SymmetricKeyProvisioningDeviceClient,
 )
 from azure.iot.device.provisioning.models import RegistrationResult
-from azure.iot.device.provisioning.transport.state_based_mqtt_provider import StateBasedMQTTProvider
+from azure.iot.device.provisioning.pipeline.state_based_mqtt_provider import StateBasedMQTTProvider
 
 fake_request_id = "Request1234"
 fake_retry_after = "3"

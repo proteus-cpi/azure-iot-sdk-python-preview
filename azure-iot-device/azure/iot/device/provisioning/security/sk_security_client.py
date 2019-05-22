@@ -14,6 +14,7 @@ class SymmetricKeySecurityClient(object):
     """
     A client that is responsible for providing shared access tokens that will eventually establish
     the authenticity of devices to Device Provisioning Service.
+    :ivar provisioning_host: Host running the Device Provisioning Service
     :ivar registration_id: : The registration ID is used to uniquely identify a device in the Device Provisioning Service.
     :ivar id_scope: : The ID scope is used to uniquely identify the specific provisioning service the device will
         register through.
@@ -22,6 +23,8 @@ class SymmetricKeySecurityClient(object):
     def __init__(self, provisioning_host, registration_id, symmetric_key, id_scope):
         """
         Initialize the symmetric key security client.
+        :param provisioning_host: Host running the Device Provisioning Service. Can be found in the Azure portal in the
+        Overview tab as the string Global device endpoint
         :param registration_id: The registration ID is used to uniquely identify a device in the Device Provisioning Service.
         The registration ID is alphanumeric, lowercase string and may contain hyphens.
         :param symmetric_key: The key which will be used to create the shared access signature token to authenticate

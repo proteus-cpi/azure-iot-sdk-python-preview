@@ -24,9 +24,7 @@ symmetric_key = os.getenv("PROVISIONING_SYMMETRIC_KEY")
 symmetric_key_security_client = SymmetricKeySecurityClient(
     provisioning_host, registration_id, symmetric_key, id_scope
 )
-provisioning_device_client = create_from_security_client(
-    provisioning_host, symmetric_key_security_client, "mqtt"
-)
+provisioning_device_client = create_from_security_client(symmetric_key_security_client, "mqtt")
 
 provisioning_device_client.register()
 
