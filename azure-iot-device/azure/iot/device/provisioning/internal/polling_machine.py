@@ -200,12 +200,6 @@ class PollingMachine(object):
         rid = str(uuid.uuid4())
 
         self._operations[rid] = constant.PUBLISH_TOPIC_REGISTRATION.format(rid)
-        # self._request_response_provider.send_request(
-        #     rid=rid,
-        #     topic=constant.PUBLISH_TOPIC_REGISTRATION.format(rid),
-        #     request=" ",
-        #     callback=self._on_register_response_received,
-        # )
         self._request_response_provider.send_request(
             rid=rid,
             request=" ",
@@ -225,12 +219,6 @@ class PollingMachine(object):
 
         operation_id = result.operation_id
         self._operations[rid] = constant.PUBLISH_TOPIC_QUERYING.format(rid, operation_id)
-        # self._request_response_provider.send_request(
-        #     rid=rid,
-        #     topic=constant.PUBLISH_TOPIC_QUERYING.format(rid, operation_id),
-        #     request=" ",
-        #     callback=self._on_query_response_received,
-        # )
         self._request_response_provider.send_request(
             rid=rid,
             request=" ",
