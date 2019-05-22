@@ -108,6 +108,7 @@ class MQTTTransport(AbstractTransport):
         :param operation_id: The id of the operation.
         :param callback: callback which is called when the message publish has been acknowledged by the service.
         """
+
         def pipeline_callback(call):
             if call.error:
                 # TODO we need error semantics on the client
@@ -142,8 +143,12 @@ class MQTTTransport(AbstractTransport):
             if callback:
                 callback()
 
+        # self._pipeline.run_op(
+        #     pipeline_ops_provisioning.EnableRegisterResponses(callback=pipeline_callback)
+        # )
+
         self._pipeline.run_op(
-            pipeline_ops_provisioning.EnableRegisterResponses(callback=pipeline_callback)
+            pipeline_ops_base.EnableFeature(feature_name=None, callback=pipeline_callback)
         )
 
     def disable_responses(self, callback=None):
@@ -161,4 +166,8 @@ class MQTTTransport(AbstractTransport):
             if callback:
                 callback()
 
-        self._pipeline.run_op(pipeline_ops_base.DisableFeature(callback=pipeline_callback))
+        # self._pipeline.run_op(pipeline_ops_base.DisableFeature(callback=pipeline_callback))
+
+        self._pipeline.run_op(
+            pipeline_ops_base.DisableFeature(feature_name=None, callback=pipeline_callback)
+        )

@@ -188,9 +188,7 @@ class PollingMachine(object):
 
     def _initialize_register(self, event_data):
         logger.info("Initializing the registration process.")
-        self._request_response_provider.subscribe(
-            topic=constant.SUBSCRIBE_TOPIC_PROVISIONING, callback=self._on_subscribe_completed
-        )
+        self._request_response_provider.enable_responses(callback=self._on_subscribe_completed)
 
     def _send_register_request(self, event_data):
         """
@@ -209,7 +207,10 @@ class PollingMachine(object):
         #     callback=self._on_register_response_received,
         # )
         self._request_response_provider.send_request(
-            rid=rid, request=" ", operation_id=None, callback=self._on_register_response_received
+            rid=rid,
+            request=" ",
+            operation_id=None,
+            callback_on_response=self._on_register_response_received,
         )
 
     def _query_operation_status(self, event_data):
@@ -234,7 +235,7 @@ class PollingMachine(object):
             rid=rid,
             request=" ",
             operation_id=operation_id,
-            callback=self._on_query_response_received,
+            callback_on_response=self._on_query_response_received,
         )
 
     def _on_register_response_received(self, rid, status_code, key_values_dict, response):

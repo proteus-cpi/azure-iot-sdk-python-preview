@@ -14,6 +14,7 @@ from azure.iot.device.provisioning.transport import (
     pipeline_events_provisioning,
     pipeline_ops_provisioning,
 )
+from azure.iot.device.common.transport import pipeline_ops_base
 from . import mqtt_topic
 
 logger = logging.getLogger(__name__)
@@ -70,14 +71,14 @@ class ProvisioningMQTTConverter(PipelineStage):
 
         # TODO : In the iothub case the enable and disable operations are defined in base.
         # TODO: I felt this is very specific to DPS so this is defined in provisioning
-        elif isinstance(op, pipeline_ops_provisioning.EnableRegisterResponses):
+        elif isinstance(op, pipeline_ops_base.EnableFeature):
             # Enabling for register gets translated into an Mqtt subscribe operation
             topic = mqtt_topic.get_topic_for_subscribe()
             self.continue_with_different_op(
                 original_op=op, new_op=pipeline_ops_mqtt.Subscribe(topic=topic)
             )
 
-        elif isinstance(op, pipeline_ops_provisioning.DisableRegisterResponses):
+        elif isinstance(op, pipeline_ops_base.DisableFeature):
             # Disabling a register response gets turned into an Mqtt unsubscribe operation
             topic = mqtt_topic.get_topic_for_subscribe()
             self.continue_with_different_op(
