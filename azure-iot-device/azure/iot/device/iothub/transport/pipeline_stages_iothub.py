@@ -8,6 +8,7 @@ import logging
 from azure.iot.device.common.transport import pipeline_ops_base
 from azure.iot.device.common.transport.pipeline_stages_base import PipelineStage
 from . import pipeline_ops_iothub
+from . import constant
 
 
 class UseSkAuthProvider(PipelineStage):
@@ -45,5 +46,44 @@ class UseSkAuthProvider(PipelineStage):
                 pipeline_ops_base.SetSasToken(sas_token=auth_provider.get_current_sas_token()),
                 callback=op.callback,
             )
+        else:
+            self.continue_op(op)
+
+
+class HandleTwinOperations(PipelineStage):
+    """
+    PipelineStage which handles twin operations. In particular, it converts twin GET and PATCH
+    operations into IotRequestAndResponse operations.  This is done at the IotHub level because
+    there is nothing transport-specific about this code.  The transport-specific implementation
+    for twin requests and responses is handled inside IotHubMQTTConverter, when it converts
+    the SendIotRequest toa transport-specific send operation and when it converts the
+    transport-specific receive event into an IotResponseEvent event.
+    """
+
+    def _run_op(self, op):
+        if isinstance(op, pipeline_ops_iothub.GetTwin):
+
+            def on_twin_response(twin_op):
+                if new_op.error:
+                    op.error = new_op.error
+                    self.complete_op(op)
+                else:
+                    # TODO: status code check here?
+                    op.twin = twin_op.response_body
+                    self.complete_op(op)
+
+            new_op = pipeline_ops_base.IotRequestAndResponse(
+                request_type=constant.twin,
+                verb="GET",
+                resource="/",
+                request_body=" ",
+                callback=on_twin_response,
+            )
+            self.continue_op(new_op)
+
+        elif isinstance(op, pipeline_ops_iothub.PatchTwinReportedProperties):
+            # TODO: convert this into IotRequestAndResponse operation
+            pass
+
         else:
             self.continue_op(op)
