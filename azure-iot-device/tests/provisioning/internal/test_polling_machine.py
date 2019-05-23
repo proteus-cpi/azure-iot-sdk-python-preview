@@ -34,8 +34,10 @@ fake_assigned_status = "assigned"
 
 
 class TestRequestResponseProvider(RequestResponseProvider):
-    def receive_response(self, topic, payload):
-        return super(TestRequestResponseProvider, self)._receive_response(topic, payload)
+    def receive_response(self, rid, status_code, key_values, payload_str):
+        return super(TestRequestResponseProvider, self)._receive_response(
+            rid=rid, status_code=status_code, key_value_dict=key_values, response=payload_str
+        )
 
 
 @pytest.fixture
@@ -108,7 +110,10 @@ class TestRegisterResponse:
 
         polling_machine._request_response_provider = mock_request_response_provider
         mocker.patch.object(mock_request_response_provider, "enable_responses")
-        mocker.patch.object(mock_request_response_provider, "publish")
+        mocker.patch.object(state_based_mqtt, "send_request")
+
+        key_value_dict = {}
+        key_value_dict["rid"] = [fake_request_id, " "]
 
         # to transition into initializing
         polling_machine.register(callback=MagicMock())
@@ -116,7 +121,7 @@ class TestRegisterResponse:
         mock_init_uuid = mocker.patch(
             "azure.iot.device.provisioning.internal.polling_machine.uuid.uuid4"
         )
-        mock_init_uuid.return_value = fake_request_id
+        mock_init_uuid.return_value = key_value_dict["rid"][0]
 
         # to transition into registering
         polling_machine._on_subscribe_completed()
@@ -126,7 +131,7 @@ class TestRegisterResponse:
         fake_request_id_query = "Request4567"
         mock_init_uuid.return_value = fake_request_id_query
 
-        fake_topic = fake_success_response_topic + "$rid={}&retry-after={}".format(
+        fake_success_response_topic + "$rid={}&retry-after={}".format(
             fake_request_id, fake_retry_after
         )
         fake_payload_result = (
@@ -141,18 +146,28 @@ class TestRegisterResponse:
         # or a encode on a string works for all versions of python
         # For only python 3 , bytes(JsonString, "utf-8") can be done
         mock_request_response_provider.receive_response(
-            fake_topic, fake_payload_result.encode("utf-8")
+            fake_request_id, "200", key_value_dict, fake_payload_result.encode("utf-8")
         )
 
         # call polling timer's time up call to simulate polling
         time_up_call = mock_init_polling_timer.call_args[0][1]
         time_up_call()
 
-        assert mock_request_response_provider.publish.call_count == 2
-        mock_request_response_provider.publish.assert_any_call(
-            topic=constant.PUBLISH_TOPIC_QUERYING.format(fake_request_id_query, fake_operation_id),
-            request=" ",
+        assert state_based_mqtt.send_request.call_count == 2
+        assert state_based_mqtt.send_request.call_args_list[0][1]["rid"] == fake_request_id
+        # assert state_based_mqtt.send_request.call_args_list[0][1][
+        #            "operation_id"] == fake_operation_id
+        assert state_based_mqtt.send_request.call_args_list[0][1]["request"] == " "
+
+        assert state_based_mqtt.send_request.call_args_list[1][1]["rid"] == fake_request_id_query
+        assert (
+            state_based_mqtt.send_request.call_args_list[1][1]["operation_id"] == fake_operation_id
         )
+        assert state_based_mqtt.send_request.call_args_list[1][1]["request"] == " "
+        # state_based_mqtt.send_request.assert_any_call(
+        #     topic=constant.PUBLISH_TOPIC_QUERYING.format(fake_request_id_query, fake_operation_id),
+        #     request=" ",
+        # )
 
     @pytest.mark.it(
         "completes registration process when there is a response with 'assigned' registration status"
@@ -163,7 +178,7 @@ class TestRegisterResponse:
         polling_machine = PollingMachine(state_based_mqtt)
 
         polling_machine._request_response_provider = mock_request_response_provider
-        mocker.patch.object(mock_request_response_provider, "subscribe")
+        mocker.patch.object(mock_request_response_provider, "enable_responses")
         mocker.patch.object(mock_request_response_provider, "publish")
         mocker.patch.object(mock_request_response_provider, "disconnect")
 
@@ -614,7 +629,7 @@ class TestQueryResponse:
         assert isinstance(mock_callback.call_args[0][1], ValueError)
         assert mock_callback.call_args[0][1].args[0] == "Incoming message failure"
 
-    @pytest.mark.it("calls register again when there is a response with status code > 429")
+    @pytest.mark.it("calls query again when there is a response with status code > 429")
     def test_receive_query_response_greater_than_429_does_query_again_with_same_operation_id(
         self, mocker
     ):
